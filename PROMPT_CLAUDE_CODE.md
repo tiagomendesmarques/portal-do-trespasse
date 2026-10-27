@@ -23,8 +23,8 @@ Stack:
 
 Regras do domínio:
 - Mantém os URLs atuais (/all-ads/, /listing/{slug}/, /listing-category/{slug}/, /listing-location/{distrito}/{concelho}/, /post-an-ad/, /my-account/, /blog/, /{slug-do-artigo}/ e as páginas). Os redirects 301 da secção 3 da especificação ficam numa tabela gerível no back-office.
-- Fluxo de publicação em 3 passos: tipo de anúncio → categoria → formulário. Título até 45 caracteres, descrição até 2000, fotos JPG/PNG até 2 MB cada.
-- Os campos personalizados ("Visão geral") são dados, não colunas: definições configuráveis (tipo, opções, obrigatório, ordem, condição de visibilidade, categorias/tipos a que se aplicam, se são filtro) e valores por anúncio. Semeia os 12 campos da especificação, incluindo a condição dos trabalhadores.
+- Fluxo de publicação em 3 passos: tipo de anúncio → categoria → formulário. Título até 45 caracteres, descrição até 2000, até 9 fotos PNG/JPG/WEBP de 3 MB cada, telefone obrigatório. Validade de 120 dias com renovação.
+- Os campos personalizados ("Visão geral") são dados, não colunas: definições configuráveis (tipo, opções, obrigatório, ordem, condição de visibilidade, categorias/tipos a que se aplicam, se são filtro) e valores por anúncio. Semeia os 12 campos de data/campos_personalizados.json (definições exatas tiradas da base de dados), incluindo a condição dos trabalhadores.
 - Anúncios novos ou editados ficam pendentes até aprovação no back-office (configurável). Estados: pendente, publicado, rejeitado, expirado, vendido.
 - Publicar é gratuito. Prepara o modelo para destaques pagos, mas sem pagamentos nem UI de planos.
 - Nome público do anunciante separado do login; nunca mostrar emails.
@@ -36,7 +36,7 @@ Entregáveis por fases. Para no fim de cada fase, mostra-me o que fizeste e espe
 2. Páginas públicas: início, listagem com filtros e ordenação, categoria, localização, anúncio, blog, páginas institucionais, sitemap.xml, robots.txt, JSON-LD.
 3. Conta e publicação: registo, login, recuperar password, painel, os meus anúncios, favoritos, editar conta, apagar conta, publicar/editar anúncio com upload de fotos, contacto ao anunciante, denúncias.
 4. Back-office: moderação, anúncios, utilizadores, denúncias, mensagens, categorias, localizações, campos, blog, páginas, redirects, definições.
-5. Migração: script idempotente que importa de um dump MySQL do WordPress (anúncios + postmeta + termos, utilizadores com hashes de password, artigos com metadados do Yoast, imagens de wp-content/uploads) e um teste que confirma que cada URL de data/urls_atuais.txt devolve 200 ou 301.
+5. Migração: script idempotente que importa de um dump MySQL do WordPress (secção 8 da especificação: só as contas verificadas, salvo decisão em contrário) (anúncios + postmeta + termos, utilizadores com hashes de password, artigos com metadados do Yoast, imagens de wp-content/uploads) e um teste que confirma que cada URL de data/urls_atuais.txt devolve 200 ou 301.
 6. Deploy: Dockerfile, cloudbuild.yaml, instruções para Cloud Run + Cloud SQL + Cloud Storage + Secret Manager, e um README.
 
 Escreve testes para as regras de negócio (validação do anúncio, campos condicionais, estados, permissões, redirects) e testes end-to-end com Playwright para o fluxo: registar → publicar → aprovar como admin → ver o anúncio na listagem.
@@ -46,8 +46,6 @@ Se algo na especificação estiver marcado como "provável" ou "a confirmar", im
 
 ---
 
-## Antes de entregar ao Claude Code
+## Já confirmado
 
-1. **Confirmar o formulário de publicação.** Abre `/post-an-ad/` com sessão iniciada e compara com a secção 5 da especificação, ou exporta os campos no wp-admin (Classified Listing → Custom Fields / Form Builder). Os campos marcados como "provável" ficam confirmados ou caem.
-2. **Confirmar definições no wp-admin:** moderação de anúncios novos (pendente ou publicado logo), validade dos anúncios em dias, limite de fotos por anúncio, se o chat do plugin está ligado.
-3. **Exportar a base de dados e os uploads** do WordPress para a fase 5.
+O formulário, as definições do plugin e os utilizadores foram confirmados com o dump da base de dados de 27/10/2026 (ver secções 5 e 8 da especificação). O dump **não** está no repositório: guarda-o fora do Git e indica o caminho ao script de migração.

@@ -77,50 +77,67 @@ Distrito → Concelho. Hoje só existem os 18 distritos do continente, com 277 c
 
 ## 5. Modelo do anúncio
 
-### Campos base
-| Campo | Regra | Estado da análise |
-|---|---|---|
-| Tipo de anúncio | um dos 4 | confirmado |
-| Categoria | uma das 13 | confirmado |
-| Título | obrigatório, máx. **45** caracteres | confirmado (config. JS do plugin) |
-| Descrição | obrigatória, máx. **2000** caracteres, texto rico simples (parágrafos, negrito, listas) | confirmado |
-| Tipo de preço | `fixed` Fixo · `negotiable` Negociável · `on_call` Sob consulta | os 2 primeiros vistos nos cartões; o 3.º é o padrão do plugin |
-| Preço | inteiro em €, obrigatório salvo "Sob consulta" | confirmado |
-| Unidade de preço | `total` "preço total" · `month` "por mês" · vazio | confirmado |
-| Características | lista de texto, uma por linha | confirmado |
-| Fotografias | JPG/PNG, **máx. 2 MB** cada, ordenáveis, a 1.ª é a principal | confirmado; limite por anúncio a confirmar (vimos até 9) |
-| Vídeo | URL YouTube/Vimeo | provável (tema) |
-| Distrito, Concelho | obrigatórios | confirmado |
-| Código postal, morada | opcionais | provável |
-| Telefone, WhatsApp, email, website | contactos do anúncio | provável; telefone e WhatsApp têm tracking de cliques no JS |
-| Horário comercial | por dia: horário (abre/fecha), 24 h ou fechado; opcional | confirmado |
-| Mapa (lat/lng) | desligado hoje | confirmado |
-| Estado | `pendente`, `publicado`, `rejeitado`, `expirado`, `vendido` | proposta |
-| Visualizações | contador | confirmado |
-| Datas | criação, publicação, expiração | proposta (validade a confirmar no wp-admin) |
-| Destaque | `featured`, `top`, `urgent` (badges do plugin) | desligado; preparar no modelo |
+> Tudo nesta secção foi confirmado na base de dados (dump de 27/10/2026): definições do plugin (`wp_options` → `rtcl_moderation_settings`, `rtcl_general_settings`, `rtcl_misc_settings`, `rtcl_account_settings`) e campos personalizados (`rtcl_cf`). Definições exatas em `data/campos_personalizados.json`.
+
+### Campos base do formulário
+| Campo | Regra |
+|---|---|
+| Tipo de anúncio | obrigatório, um dos 4 (`trespasse`, `venda_de_ativos`, `aluguer_de_ativos`, `investimentos`) |
+| Categoria | obrigatória, uma das 13 |
+| Título | obrigatório, máx. **45** caracteres |
+| Descrição | obrigatória, máx. **2000** caracteres, editor rico (`wp_editor`) |
+| Tipo de preço | `fixed` Fixo (8 anúncios) · `negotiable` Negociável (14) |
+| Preço | € inteiro, separador de milhares `.`, decimal `,`, símbolo à direita com espaço (`95.000 €`) |
+| Unidade de preço | `total` "preço total" · `month` "por mês" · vazio |
+| Características | lista de texto, uma por linha (meta `classima_spec_info`) |
+| Fotografias | **máx. 9 por anúncio**, **máx. 3 MB** cada, png/jpg/jpeg/webp, não obrigatórias, ordenáveis |
+| Localização | obrigatória: Distrito → Concelho (o plugin chama-lhes "Distrito" e "Cidade") |
+| Telefone | **obrigatório**; revelado com clique, e só a utilizadores com sessão iniciada |
+| Escondidos no formulário atual | vídeo, código postal, morada, WhatsApp, email, website (`hide_form_fields`). Não os mostrar no site novo; manter só no modelo de dados. |
+| Horário comercial e perfis sociais | **desligados** (3 anúncios antigos têm horário; mostrar se existir, sem campo no formulário) |
+| Mapa | desligado |
+| Termos | sem checkbox de termos no formulário de anúncio hoje (`enable_listing_terms_conditions: no`) |
+
+### Regras de funcionamento
+| Regra | Valor atual |
+|---|---|
+| Estado de um anúncio novo | **pendente** (moderação manual) |
+| Estado após edição | **pendente** |
+| Validade | **120 dias** após publicação; renovação permitida |
+| Anúncios expirados | apagados ao fim de 365 dias |
+| Etiqueta "Novo" | primeiros 15 dias · "Popular" a partir de 100 visitas · "Destaque" e "Top" existem mas não há planos ativos |
+| Anúncios por página | 9, vista em grelha por omissão; 4 relacionados |
+| Favoritos, denunciar abuso, marcar como vendido, comparar, vista rápida | ligados |
+| Avaliações (Quality/Price/Service) | ligadas (proposta: retirar) |
+| Informação do vendedor | só para utilizadores com sessão iniciada |
+| Chat interno | desligado |
+| Registo | ligado, **verificação de email obrigatória**, telefone opcional |
+| Publicar sem conta | não |
+| Plano | "Grátis": 0 €, 10 anúncios. Os planos pagos (Top, Destaque, Bump up de 10 a 25 €) estão em rascunho. Stripe, Authorize.net e transferência desligados. Nunca houve pagamentos reais (os 11 registos são de demonstração ou do plano grátis). |
 
 ### Campos personalizados (secção "Visão geral")
-Observados nos 17 anúncios publicados. Hoje aplicam-se a todas as categorias. Todos opcionais.
+12 campos, grupo "General Custom Fields", associados a **todas as categorias**. Ordem do site:
 
-| Rótulo no site | Tipo | Opções / notas |
-|---|---|---|
-| Renda | número (€/mês) | |
-| IVA | escolha única | `+IVA`, `Inclui IVA` |
-| Faturação média anual | número (€) | |
-| O trespasse inclui trabalhadores com contrato? | escolha única | Sim / Não |
-| Quantos trabalhadores com contrato com termo? | número | só se a anterior = Sim |
-| Quantos trabalhadores com contrato sem termo? | número | só se a anterior = Sim |
-| Há quanto tempo no mercado? (anos) | número | |
-| Negócio sazonal | escolha única | Sim / Não |
-| Tipo de negócio | escolha múltipla | B2B (Empresas), B2C (Pessoas Singulares) |
-| Depende de fornecedores? | escolha única | Sim / Não |
-| Presença | escolha múltipla | Espaço Físico, Online |
-| Venda urgente? | escolha única | Sim / Não |
+| # | ID | Rótulo | Tipo | Opções (valor guardado) | Obrigatório | Pesquisável | Ajuda / placeholder |
+|---|---|---|---|---|---|---|---|
+| 0 | 2686 | Renda | número | | não | sim | "Valor da Renda (Mensal)" · Ex: 1200 |
+| 1 | 3170 | Faturação média anual | número | | não | sim | "Em média quanto fatura anualmente? Indique um valor aproximado. Complete este campo para uma venda mais rápida." |
+| 2 | 2696 | Venda urgente? | checkbox | `sim` Sim | não | não | |
+| 3 | 2688 | IVA | rádio | `plus-iva` +IVA · `inclui-iva` Inclui IVA | não | não | "O valor do trespasse apresentado é +IVA ou já contém o IVA?" |
+| 4 | 2692 | O trespasse inclui trabalhadores com contrato? | rádio | `sim` · `nao` | não | sim | |
+| 5 | 2693 | Quantos trabalhadores com contrato sem termo? | número | | não | não | Ex: 3 · **só se #4 = sim** |
+| 6 | 2695 | Quantos trabalhadores com contrato com termo? | número | | não | não | Ex: 9 · **só se #4 = sim** |
+| 7 | 2694 | Há quanto tempo no mercado? (anos) | número, mín. 1 | | não | sim | "A empresa tem quantos anos no mercado de trabalho?" · Ex: 10 anos |
+| 8 | 2698 | Negócio sazonal | rádio | `sim` · `nao` | **sim** | não | |
+| 9 | 2699 | Tipo de negócio | checkbox | `b2b` B2B (Empresas) · `b2c` B2C (Pessoas Singulares) | **sim** | não | "Vende os seus produtos e serviços a empresas ou consumidores finais? Ou a ambos os casos." |
+| 10 | 2989 | Depende de fornecedores? | rádio | `sim` · `nao` | **sim** | não | "Por exemplo: um restaurante depende de fornecedores de carne, peixe, etc" |
+| 11 | 2701 | Presença | checkbox | `espaco-fisico` Espaço Físico · `online` Online | **sim** | não | "O seu negócio tem uma vertente online? Ou é apenas físico?" |
 
-Os campos devem ser **configuráveis no back-office** (rótulo, tipo, opções, obrigatório, ordem, condição, a que categorias/tipos se aplicam, se aparecem como filtro).
+Os valores estão em `wp_postmeta` com a chave `_field_{ID}`. Corrigir na migração: rótulo "Tipo de negócio." (ponto final) e "Faturação média Anual".
 
-> O formulário de publicação só aparece com sessão iniciada, por isso não foi visto diretamente. Antes de fechar o desenvolvimento, confirmar a lista de campos com uma conta de teste ou no wp-admin (Classified Listing → Custom Fields / Form Builder e Settings).
+Os campos devem ser **configuráveis no back-office** (rótulo, tipo, opções, obrigatório, ordem, condição, ajuda, placeholder, a que categorias/tipos se aplicam, se são filtro).
+
+**Lixo a não migrar:** 71 outros `rtcl_cf` (marcas de carros, portáteis, animais…) e o "Sample Form" do Form Builder (`wp_rtcl_forms`) são restos da demonstração do tema e não estão em uso.
 
 ## 6. Páginas e comportamento
 
@@ -201,7 +218,13 @@ Fonte preferida: **dump da base de dados MySQL** do WordPress + pasta `wp-conten
 
 - Anúncios: `wp_posts` (`post_type = 'rtcl_listing'`) + `wp_postmeta` (preço, `_rtcl_*`, campos personalizados `_field_{id}`, galeria) + `wp_term_relationships` (categoria, localização) + tipo de anúncio. Snapshot público já recolhido em `data/anuncios.json`.
 - Imagens: `wp-content/uploads/classified-listing/{ano}/{mês}/` → bucket.
-- Utilizadores: `wp_users` + `wp_usermeta`. Migrar os hashes de password (`$wp$2y$...` bcrypt no WP ≥ 6.8, ou phpass `$P$`), validar no 1.º login e voltar a gerar o hash. Alternativa: obrigar a redefinir a password.
+- Utilizadores: `wp_users` + `wp_usermeta` (telefone em `_rtcl_phone`, WhatsApp `_rtcl_whatsapp_number`, website `_rtcl_website`, morada `_rtcl_address`, código postal `_rtcl_zipcode`, localização `_rtcl_location`; perfil em `wp_capabilities`). Guardar `wp_user_id` para ligar anúncios (`post_author`).
+  - **Passwords:** 914 contas com `$wp$2y$…` (WP ≥ 6.8: bcrypt sobre base64(HMAC-SHA384(password, chave "wp-sha384"))) e 9 com phpass `$P$…`. Verificar os dois formatos no 1.º login e voltar a gerar o hash no formato novo. Não há contas com MD5 nem login social (`wp_social_users` vazio).
+  - **Contas reais vs. spam:** 923 contas, mas **860 nunca verificaram o email** (têm `rtcl_verification_key`) e 848 foram criadas em julho–agosto de 2026 (vaga de registos automáticos). Só **63 estão verificadas**, e incluem os 17 anunciantes e as 4 contas da equipa (2 administradores, 1 editor, 1 autor). Proposta: migrar as 63 verificadas; as não verificadas ficam de fora (nunca puderam publicar). Decisão do dono.
+  - 27 contas usam o email como nome de utilizador e nome público: gerar nome público a partir do primeiro nome ou de "Anunciante".
+- Anúncios: 17 publicados + 5 expirados (`rtcl-expired`, migrar como expirados). Tipo em `ad_type`, preço em `price`, `price_type`, `_rtcl_price_unit`, telefone `phone`, características `classima_spec_info`, ordem das fotos `_rtcl_attachments_order`, visitas `_views`, validade `expiry_date`, horário `_rtcl_bhs`. **9 anúncios expiram a 4/11/2026.**
+- Estatísticas: `wp_rtcl_listing_stats` (666 linhas) com visitas e cliques; migrar como contadores.
+- Não migrar: 436 comentários (todos spam, por aprovar), `wp_rtcl_sessions`, tabelas do Wordfence, Action Scheduler e Yoast indexables (regeneráveis). As 58 mensagens do formulário de contacto (`wp_e_submissions`) podem ser exportadas à parte se interessarem.
 - Blog: 336 artigos com slug, data, conteúdo, imagem de destaque, etiquetas, metadados Yoast (`_yoast_wpseo_title`, `_yoast_wpseo_metadesc`). Índice em `data/blog_artigos.json`.
 - Páginas: texto reescrito à mão (Elementor guarda JSON).
 - Favoritos, contagens de visitas: migrar se existirem em `wp_usermeta`/`wp_postmeta`.
