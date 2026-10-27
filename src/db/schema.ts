@@ -177,7 +177,7 @@ export const listings = pgTable(
     userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     typeKey: text("type_key").notNull().references(() => listingTypes.key),
     categoryId: integer("category_id").notNull().references(() => categories.id),
-    // Concelho; o distrito obtém-se pelo parent.
+    // Normalmente um concelho (o distrito obtém-se pelo parent); anúncios antigos podem apontar só para o distrito.
     locationId: integer("location_id").notNull().references(() => locations.id),
     title: text("title").notNull(),
     slug: text("slug").notNull().unique(),
@@ -203,6 +203,8 @@ export const listings = pgTable(
     publishedAt: timestamp("published_at", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     expiryWarnedAt: timestamp("expiry_warned_at", { withTimezone: true }),
+    // Título + descrição + características, em minúsculas e sem acentos (ver lib/text.ts).
+    searchText: text("search_text").notNull().default(""),
     ...timestamps,
   },
   (t) => [

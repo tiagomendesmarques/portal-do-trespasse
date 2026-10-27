@@ -1,0 +1,1 @@
+ALTER TABLE "listings" ADD COLUMN "search_text" text DEFAULT '' NOT NULL;
