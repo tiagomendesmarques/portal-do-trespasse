@@ -1,0 +1,9 @@
+node_modules
+.next
+.data
+dist
+prototipo
+e2e
+*.sql
+*.zip
+.git

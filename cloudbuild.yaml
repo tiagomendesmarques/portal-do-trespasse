@@ -1,0 +1,23 @@
+# Cada push no ramo configurado no gatilho do Cloud Build constrói a imagem e faz deploy do staging.
+substitutions:
+  _REGION: europe-west1
+  _SERVICE: portal-do-trespasse-staging
+  _REPO: portal-do-trespasse
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app:$COMMIT_SHA", "."]
+  - name: gcr.io/cloud-builders/docker
+    args: ["push", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app:$COMMIT_SHA"]
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app:$COMMIT_SHA
+      - --region=${_REGION}
+      - --allow-unauthenticated
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app:$COMMIT_SHA
+options:
+  logging: CLOUD_LOGGING_ONLY

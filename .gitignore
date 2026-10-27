@@ -1,5 +1,6 @@
 # Exports do WordPress com dados pessoais: nunca versionar
 *.sql
+!drizzle/*.sql
 *.sql.gz
 *.sql.zip
 *.zip
@@ -10,3 +11,9 @@ dumps/
 node_modules/
 .env*
 !.env.example
+.next/
+.data/
+next-env.d.ts
+*.tsbuildinfo
+coverage/
+dist/
