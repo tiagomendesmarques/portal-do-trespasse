@@ -80,8 +80,13 @@ async function uniqueSlug(title: string, ignoreId?: number): Promise<string> {
   for (let n = 2; ; n++) if (!used.has(`${base}-${n}`)) return `${base}-${n}`;
 }
 
-/** Grava (cria ou atualiza) um anúncio validado. Devolve o anúncio gravado. */
-export async function saveListing(userId: number, data: ValidListing, opts: { editId?: number; status: "pending" | "published"; durationDays: number }) {
+type ListingStatus = (typeof schema.listings.$inferSelect)["status"];
+
+/**
+ * Grava (cria ou atualiza) um anúncio validado.
+ * As datas de publicação/validade só são definidas quando o anúncio passa a publicado pela primeira vez.
+ */
+export async function saveListing(userId: number, data: ValidListing, opts: { editId?: number; status: ListingStatus; durationDays: number; firstPublish?: boolean }) {
   const db = getDb();
   const description = textToHtml(data.description);
   const now = new Date();
@@ -89,7 +94,7 @@ export async function saveListing(userId: number, data: ValidListing, opts: { ed
     typeKey: data.typeKey, categoryId: data.categoryId, locationId: data.locationId, title: data.title, description,
     priceType: data.priceType, price: data.price, priceUnit: data.priceUnit, phone: data.phone, features: data.features,
     searchText: buildSearchText([data.title, description, data.features.join(" ")]), status: opts.status, updatedAt: now,
-    ...(opts.status === "published" ? { publishedAt: now, expiresAt: new Date(now.getTime() + opts.durationDays * 86_400_000) } : {}),
+    ...(opts.status === "published" && opts.firstPublish ? { publishedAt: now, expiresAt: new Date(now.getTime() + opts.durationDays * 86_400_000) } : {}),
   };
 
   const listing = opts.editId

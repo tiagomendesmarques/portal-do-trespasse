@@ -35,11 +35,12 @@ export async function saveListingAction(_: PostState, fd: FormData): Promise<Pos
   if (!(await rateLimit(`post:${user.id}`, 30, 3600))) return { message: "Fez muitas alterações seguidas. Tente daqui a pouco." };
 
   const editId = Number(fd.get("editId")) || undefined;
+  const isStaff = user.role === "admin" || user.role === "editor";
   const db = getDb();
   let previous: typeof schema.listings.$inferSelect | undefined;
   if (editId) {
     previous = await db.query.listings.findFirst({ where: (l, { eq }) => eq(l.id, editId) });
-    if (!previous || previous.userId !== user.id) return { message: "Não pode editar este anúncio." };
+    if (!previous || (previous.userId !== user.id && !isStaff)) return { message: "Não pode editar este anúncio." };
   } else {
     const limit = (await getSettings(["listings.freeAdsPerUser"]))["listings.freeAdsPerUser"];
     if ((await activeListingCount(user.id)) >= limit) return { message: `Já tem ${limit} anúncios ativos, o máximo do plano grátis. Marque como vendido ou apague um anúncio antes de publicar outro.` };
@@ -58,21 +59,27 @@ export async function saveListingAction(_: PostState, fd: FormData): Promise<Pos
   });
   if (!result.ok) return { errors: result.errors, message: "Há campos por corrigir. Veja as mensagens a vermelho." };
 
-  // Fotos: só as carregadas por este utilizador ou as que o anúncio já tinha.
+  // Fotos: só as carregadas por quem edita, pelo dono, ou as que o anúncio já tinha.
+  const ownerId = previous?.userId ?? user.id;
   const existing = editId ? (await db.query.listingImages.findMany({ where: (i, { eq }) => eq(i.listingId, editId) })).map((i) => i.storageKey) : [];
-  if (result.data.images.some((k) => !k.startsWith(`listings/u${user.id}/`) && !existing.includes(k))) {
+  if (result.data.images.some((k) => !k.startsWith(`listings/u${user.id}/`) && !k.startsWith(`listings/u${ownerId}/`) && !existing.includes(k))) {
     return { errors: { images: "Fotografia inválida. Volte a carregá-la." } };
   }
 
+  // A equipa a editar o anúncio de outra pessoa: mantém o estado e não envia emails.
+  const staffEdit = Boolean(editId && previous && previous.userId !== user.id && isStaff);
   const settings = await getSettings(["listings.moderation", "listings.moderateEdits", "listings.durationDays"]);
   const wasPublic = previous && ["published", "sold"].includes(previous.status);
-  const status: "pending" | "published" = editId
-    ? wasPublic && !settings["listings.moderateEdits"] ? "published" : "pending"
-    : settings["listings.moderation"] ? "pending" : "published";
+  const status = staffEdit
+    ? previous!.status
+    : editId
+      ? wasPublic && !settings["listings.moderateEdits"] ? previous!.status : "pending"
+      : settings["listings.moderation"] ? "pending" : "published";
 
-  const listing = await saveListing(user.id, result.data, { editId, status, durationDays: settings["listings.durationDays"] });
-  await db.insert(schema.auditLog).values({ actorId: user.id, action: editId ? "listing.edit" : "listing.create", entity: "listing", entityId: String(listing.id), data: { status } });
+  const listing = await saveListing(ownerId, result.data, { editId, status, durationDays: settings["listings.durationDays"], firstPublish: !editId });
+  await db.insert(schema.auditLog).values({ actorId: user.id, action: staffEdit ? "listing.staff_edit" : editId ? "listing.edit" : "listing.create", entity: "listing", entityId: String(listing.id), data: { status } });
 
+  if (staffEdit) redirect(`/admin/anuncios/${listing.id}/?editado=1`);
   if (status === "pending") {
     await sendTemplate(editId ? "listing_edited" : "listing_submitted", user.email, {
       name: user.displayName, listing_title: listing.title, account_listings_url: absoluteUrl("/my-account/listings/"),

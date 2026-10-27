@@ -13,7 +13,8 @@ export default async function EditAdPage({ params }: { params: Promise<{ id: str
   const user = await getCurrentUser();
   if (!user) redirect(`/my-account/?next=/post-an-ad/editar/${id}/`);
   const data = await listingForEdit(Number(id));
-  if (!data || data.listing.userId !== user.id) notFound();
+  const staff = user.role === "admin" || user.role === "editor";
+  if (!data || (data.listing.userId !== user.id && !staff)) notFound();
   const ctx = await loadFormContext();
   return (
     <div className="wrap max-w-4xl py-8">
