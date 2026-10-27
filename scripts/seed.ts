@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { sql } from "drizzle-orm";
 import { closeDb, getDb, schema } from "../src/db";
+import { PAGES } from "../src/content/pages";
 import { EMAIL_TEMPLATES } from "../src/lib/email/defaults";
 import { SETTINGS_DEFAULTS } from "../src/lib/settings-defaults";
 import { slugify } from "../src/lib/slug";
@@ -109,6 +110,11 @@ for (const t of EMAIL_TEMPLATES) {
   await db.insert(schema.emailTemplates).values(t).onConflictDoNothing();
 }
 
+/* Páginas institucionais (não substitui textos já editados no back-office) */
+for (const p of PAGES) {
+  await db.insert(schema.pages).values(p).onConflictDoNothing();
+}
+
 /* Redirects do site antigo */
 const REDIRECTS: [string, string, string][] = [
   ["/listing-category/tecnologia/", "/listing-category/imobiliario/", "Categoria Imobiliário tinha o slug tecnologia"],
@@ -126,5 +132,5 @@ for (const [fromPath, toPath, note] of REDIRECTS) {
   await db.insert(schema.redirects).values({ fromPath, toPath, note }).onConflictDoNothing();
 }
 
-console.log(`Seed concluído: ${TYPES.length} tipos, ${cats.length} categorias, ${locs.length} distritos, ${concelhos} concelhos, ${fields.length} campos, ${EMAIL_TEMPLATES.length} modelos de email, ${REDIRECTS.length} redirects.`);
+console.log(`Seed concluído: ${TYPES.length} tipos, ${cats.length} categorias, ${locs.length} distritos, ${concelhos} concelhos, ${fields.length} campos, ${EMAIL_TEMPLATES.length} modelos de email, ${REDIRECTS.length} redirects, ${PAGES.length} páginas.`);
 await closeDb();

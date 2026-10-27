@@ -55,3 +55,16 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.01em; text-wra
 .prose-listing ul { list-style: disc; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.25rem; }
 .prose-listing ol { list-style: decimal; padding-left: 1.25rem; }
 .prose-listing h2, .prose-listing h3 { font-size: 1.15rem; font-weight: 700; margin-top: 0.5rem; }
+
+/* Texto de artigos e páginas. */
+.prose-content { max-width: 70ch; display: flex; flex-direction: column; gap: 1rem; font-size: 1.0625rem; line-height: 1.7; }
+.prose-content h2 { font-size: 1.5rem; font-weight: 700; margin-top: 1rem; }
+.prose-content h3 { font-size: 1.2rem; font-weight: 700; margin-top: 0.5rem; }
+.prose-content ul { list-style: disc; padding-left: 1.4rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.prose-content ol { list-style: decimal; padding-left: 1.4rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.prose-content a { color: var(--color-accent); text-decoration: underline; }
+.prose-content img { border-radius: 0.75rem; height: auto; }
+.prose-content blockquote { border-left: 3px solid var(--color-brand); padding-left: 1rem; color: var(--color-muted); }
+.prose-content table { width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }
+.prose-content td, .prose-content th { border: 1px solid var(--color-line); padding: 0.4rem 0.6rem; }
+.prose-faq h2 { font-size: 1.15rem; margin-top: 0.75rem; }
