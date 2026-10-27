@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Schibsted_Grotesk } from "next/font/google";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
 import { isProduction, SITE_ENV, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -25,9 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {SITE_ENV === "staging" ? "Staging" : "Desenvolvimento"}: site de testes. Os emails não são enviados.
           </div>
         )}
-        <SiteHeader />
-        <main className="flex-1">{children}</main>
-        <SiteFooter />
+        {children}
       </body>
     </html>
   );

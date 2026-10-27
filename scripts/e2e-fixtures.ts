@@ -2,6 +2,7 @@
 // hashes no formato do WordPress, com password "palavra-passe". Idempotente.
 import { sql } from "drizzle-orm";
 import { closeDb, getDb, schema } from "../src/db";
+import { hashPassword } from "../src/lib/auth/password";
 
 if (process.env.SITE_ENV === "production" || process.env.SITE_ENV === "staging") {
   console.error("Recusado: as fixtures de teste só correm em desenvolvimento.");
@@ -17,6 +18,12 @@ for (const u of users) {
   await db.insert(schema.users).values({ ...u, emailVerifiedAt: new Date() })
     .onConflictDoUpdate({ target: schema.users.wpId, set: { passwordHash: u.passwordHash, emailVerifiedAt: sql`now()` } });
 }
+// Administrador de teste (password "admin-teste-123").
+const admin = { username: "admin.teste", email: "admin.teste@exemplo.pt", displayName: "Admin de Teste", role: "admin" as const, passwordHash: await hashPassword("admin-teste-123"), emailVerifiedAt: new Date() };
+const existingAdmin = await db.query.users.findFirst({ where: sql`lower(${schema.users.username}) = 'admin.teste'` });
+if (existingAdmin) await db.update(schema.users).set({ passwordHash: admin.passwordHash, role: "admin", status: "active" }).where(sql`${schema.users.id} = ${existingAdmin.id}`);
+else await db.insert(schema.users).values(admin);
+
 // Os testes criam várias contas seguidas a partir do mesmo IP: limpa os limites de tentativas.
 await db.delete(schema.rateLimits);
 console.log("Fixtures de teste prontas.");
