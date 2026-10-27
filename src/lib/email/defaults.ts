@@ -190,6 +190,8 @@ A sua conta e os seus anúncios foram apagados do Portal do Trespasse, como pedi
 
 O Portal do Trespasse mudou para um site novo, mais rápido e simples de usar. A sua conta e os seus anúncios passaram para o site novo e a sua password continua a mesma.
 
+Se não se lembrar da password, pode pedir uma nova em {reset_request_url}
+
 [Entrar]({login_url})`,
   },
   {

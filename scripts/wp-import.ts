@@ -1,9 +1,11 @@
-// Importa do WordPress: utilizadores verificados, anúncios (com campos e fotos) e artigos do blog.
+// Importa do WordPress: utilizadores verificados, anúncios (com campos, fotos e estatísticas),
+// artigos do blog (publicados e rascunhos) e mensagens do formulário de contacto.
 // Uso: npx tsx scripts/wp-import.ts --sql <dump.sql> --uploads <pasta que contém uploads/>
 // Idempotente (atualiza por wp_id). Nunca substitui uma password já convertida no site novo.
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import sharp from "sharp";
 import { closeDb, getDb, schema } from "../src/db";
 import type { BusinessHours } from "../src/db/schema";
 import { mediaUrl, readMedia, storeImage } from "../src/lib/media";
@@ -32,8 +34,10 @@ const warn = (msg: string) => { bump("avisos"); console.warn("  ⚠", msg); };
 console.log("A ler o dump…");
 const T = parseDump(readFileSync(SQL, "utf8"), [
   "wp_users", "wp_usermeta", "wp_posts", "wp_postmeta", "wp_terms", "wp_term_taxonomy", "wp_term_relationships",
+  "wp_rtcl_listing_stats", "wp_e_submissions", "wp_e_submissions_values",
 ]);
-const rows = (t: string) => T.get(t)!;
+// As tabelas de plugins podem não existir num dump parcial.
+const rows = (t: string) => T.get(t) ?? [];
 
 function metaIndex(table: string, idCol: string) {
   const idx = new Map<number, Map<string, string[]>>();
@@ -83,7 +87,11 @@ const attachedFile = (attId: number) => pm(attId, "_wp_attached_file");
 async function importImage(key: string, file: string): Promise<{ width: number; height: number } | null> {
   const full = join(uploadsDir, file);
   if (!existsSync(full)) { warn(`imagem em falta: ${file}`); return null; }
-  if (await readMedia(`${key}-400.webp`)) { bump("imagens já existentes"); return { width: 0, height: 0 }; }
+  if (await readMedia(`${key}-400.webp`)) {
+    bump("imagens já existentes");
+    const meta = await sharp(readFileSync(full), { failOn: "none" }).metadata().catch(() => null);
+    return { width: meta?.autoOrient?.width ?? meta?.width ?? 0, height: meta?.autoOrient?.height ?? meta?.height ?? 0 };
+  }
   try {
     const dims = await storeImage(key, readFileSync(full));
     bump("imagens processadas");
@@ -160,6 +168,13 @@ const concelho = (dSlug: string, cSlug: string) => {
 
 /* ---------- Anúncios ---------- */
 console.log("Anúncios…");
+// Cliques em "ver telefone": a tabela de estatísticas do plugin é mais completa do que o postmeta.
+const phoneStats = new Map<number, number>();
+for (const r of rows("wp_rtcl_listing_stats")) {
+  if (r.stat_key !== "reveal" && r.stat_key !== "phone_click") continue;
+  const id = Number(r.listing_id);
+  phoneStats.set(id, (phoneStats.get(id) ?? 0) + (Number(r.stat_count) || 0));
+}
 const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 function businessHours(raw: PhpValue): BusinessHours | null {
   if (!raw || typeof raw !== "object") return null;
@@ -218,7 +233,7 @@ for (const p of listingPosts) {
     businessHours: businessHours(maybeUnserialize(pm(wpId, "_rtcl_bhs"))),
     status: (p.post_status === "publish" ? "published" : "expired") as "published" | "expired",
     views: Number(pm(wpId, "_views") ?? 0) || 0,
-    phoneClicks: Number(pm(wpId, "_rtcl_phone_click") ?? 0) || 0,
+    phoneClicks: Math.max(Number(pm(wpId, "_rtcl_phone_click") ?? 0) || 0, phoneStats.get(wpId) ?? 0),
     publishedAt,
     expiresAt,
     searchText: buildSearchText([title, description, features.join(" ")]),
@@ -273,7 +288,8 @@ async function rewriteContentImages(html: string, postId: number): Promise<strin
 }
 const yoast = (v: string | undefined) => (v && !v.includes("%%") ? v : null);
 
-for (const p of rows("wp_posts").filter((x) => x.post_type === "post" && x.post_status === "publish")) {
+for (const p of rows("wp_posts").filter((x) => x.post_type === "post" && ["publish", "draft"].includes(String(x.post_status)))) {
+  const draft = p.post_status === "draft";
   const wpId = Number(p.ID);
   const thumb = Number(pm(wpId, "_thumbnail_id") ?? 0);
   let featuredImageKey: string | null = null;
@@ -290,16 +306,36 @@ for (const p of rows("wp_posts").filter((x) => x.post_type === "post" && x.post_
     contentHtml,
     featuredImageKey,
     tags,
-    status: "published" as const,
+    status: (draft ? "draft" : "published") as "draft" | "published",
     seoTitle: yoast(pm(wpId, "_yoast_wpseo_title")),
     seoDescription: yoast(pm(wpId, "_yoast_wpseo_metadesc")),
     authorId: userIdByWp.get(Number(p.post_author)) ?? null,
-    publishedAt: wpDate(p.post_date_gmt),
-    createdAt: wpDate(p.post_date_gmt) ?? new Date(),
+    publishedAt: draft ? null : wpDate(p.post_date_gmt),
+    createdAt: wpDate(p.post_date_gmt) ?? wpDate(p.post_modified_gmt) ?? new Date(),
     updatedAt: wpDate(p.post_modified_gmt) ?? new Date(),
   };
   await db.insert(schema.posts).values({ wpId, ...values }).onConflictDoUpdate({ target: schema.posts.wpId, set: values });
-  bump("artigos");
+  bump(draft ? "artigos em rascunho" : "artigos");
+}
+
+/* ---------- Mensagens do formulário de contacto (Elementor) ---------- */
+console.log("Mensagens de contacto…");
+const subValues = new Map<number, Record<string, string>>();
+for (const v of rows("wp_e_submissions_values")) {
+  const id = Number(v.submission_id);
+  subValues.set(id, { ...subValues.get(id), [String(v.key)]: String(v.value ?? "") });
+}
+for (const sub of rows("wp_e_submissions")) {
+  const v = subValues.get(Number(sub.id)) ?? {};
+  const createdAt = wpDate(sub.created_at_gmt);
+  if (!v.email || !v.message || !createdAt) continue;
+  const M = schema.messages;
+  // Sem wp_id nesta tabela: a mesma mensagem é reconhecida pelo email e pela data.
+  const exists = await db.query.messages.findFirst({ where: and(eq(M.kind, "site_contact"), eq(M.email, v.email.trim().toLowerCase()), eq(M.createdAt, createdAt)) });
+  if (exists) { bump("mensagens já importadas"); continue; }
+  // O IP não é migrado (não faz falta e é um dado pessoal).
+  await db.insert(M).values({ kind: "site_contact", name: v.name?.trim() || "Sem nome", email: v.email.trim().toLowerCase(), body: v.message.trim(), createdAt });
+  bump("mensagens de contacto");
 }
 
 

@@ -261,6 +261,7 @@ Fonte preferida: **dump da base de dados MySQL** do WordPress + pasta `wp-conten
 - Favoritos, contagens de visitas: migrar se existirem em `wp_usermeta`/`wp_postmeta`.
 - Redirects: tabela gerada a partir de `data/urls_atuais.txt`.
 - Validar no fim: todos os 415 URLs respondem 200 ou 301.
+- **Estado (27/10/2026):** importação ensaiada numa base vazia e confirmada por `scripts/wp-verify.ts` (20/20), idempotente, 415/415 URLs. Também migram os 2 rascunhos do blog, as 58 mensagens de contacto (sem IP) e os cliques no telefone de `wp_rtcl_listing_stats`. Guia do dia da mudança: `docs/MIGRACAO.md`.
 
 ## 9. Requisitos não funcionais
 

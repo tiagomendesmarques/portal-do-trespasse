@@ -30,10 +30,13 @@ Com o dump SQL do phpMyAdmin e a pasta `wp-content/uploads` (nunca dentro do rep
 
 ```bash
 npx tsx scripts/wp-import.ts --sql /caminho/dump.sql --uploads /caminho/wp-content
+npx tsx scripts/wp-verify.ts --sql /caminho/dump.sql    # compara o dump com a base nova
 ```
 
-Importa os utilizadores verificados, os anúncios (com campos e fotos) e os artigos do blog.
+Importa os utilizadores verificados, os anúncios (com campos, fotos e estatísticas), os artigos
+do blog (publicados e rascunhos) e as mensagens do formulário de contacto.
 Pode correr várias vezes: atualiza pelo ID do WordPress e não mexe em passwords já convertidas.
+O passo a passo do dia da mudança está em [docs/MIGRACAO.md](docs/MIGRACAO.md).
 
 ### Testes
 
