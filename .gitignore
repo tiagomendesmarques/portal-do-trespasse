@@ -1,0 +1,12 @@
+# Exports do WordPress com dados pessoais: nunca versionar
+*.sql
+*.sql.gz
+*.sql.zip
+*.zip
+*.zip.0*
+*.wpress
+dumps/
+
+node_modules/
+.env*
+!.env.example

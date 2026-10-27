@@ -1,0 +1,93 @@
+[
+ {
+  "nome": "Agricultura",
+  "slug_novo": "agricultura",
+  "slug_wordpress": "agricultura",
+  "id_wordpress": 741,
+  "icone_wp": "tree"
+ },
+ {
+  "nome": "Construção Civil",
+  "slug_novo": "construcao-civil",
+  "slug_wordpress": "construcao-civil",
+  "id_wordpress": 737,
+  "icone_wp": "building"
+ },
+ {
+  "nome": "Educação",
+  "slug_novo": "educacao",
+  "slug_wordpress": "educacao",
+  "id_wordpress": 735,
+  "icone_wp": "book"
+ },
+ {
+  "nome": "Energia",
+  "slug_novo": "energia",
+  "slug_wordpress": "energia",
+  "id_wordpress": 733,
+  "icone_wp": "lightbulb"
+ },
+ {
+  "nome": "Finanças e Seguros",
+  "slug_novo": "financas-e-seguros",
+  "slug_wordpress": "financas-e-seguros",
+  "id_wordpress": 736,
+  "icone_wp": "money"
+ },
+ {
+  "nome": "Imobiliário",
+  "slug_novo": "imobiliario",
+  "slug_wordpress": "tecnologia",
+  "id_wordpress": 744,
+  "icone_wp": "home"
+ },
+ {
+  "nome": "Industria Alimentar",
+  "slug_novo": "industria-alimentar",
+  "slug_wordpress": "industria-alimentar",
+  "id_wordpress": 740,
+  "icone_wp": "shopping-basket"
+ },
+ {
+  "nome": "Logística",
+  "slug_novo": "logistica",
+  "slug_wordpress": "logistica",
+  "id_wordpress": 742,
+  "icone_wp": "box"
+ },
+ {
+  "nome": "Media",
+  "slug_novo": "media",
+  "slug_wordpress": "media",
+  "id_wordpress": 743,
+  "icone_wp": "camera"
+ },
+ {
+  "nome": "Restauração",
+  "slug_novo": "restauracao",
+  "slug_wordpress": "restauracao",
+  "id_wordpress": 734,
+  "icone_wp": "food"
+ },
+ {
+  "nome": "Saúde",
+  "slug_novo": "saude",
+  "slug_wordpress": "saude",
+  "id_wordpress": 739,
+  "icone_wp": "heartbeat"
+ },
+ {
+  "nome": "Serviços/Setores Diversos",
+  "slug_novo": "servicos-setores-diversos",
+  "slug_wordpress": "servicos-setores-diversos",
+  "id_wordpress": 745,
+  "icone_wp": "th-large"
+ },
+ {
+  "nome": "Turismo e Hotelaria",
+  "slug_novo": "turismo-e-hotelaria",
+  "slug_wordpress": "turismo-e-hotelaria",
+  "id_wordpress": 738,
+  "icone_wp": "glass"
+ }
+]
