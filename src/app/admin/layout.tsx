@@ -45,13 +45,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <aside className="flex flex-col gap-6 bg-navy p-4 text-white md:sticky md:top-0 md:h-screen md:w-60 md:flex-none md:overflow-y-auto">
-        <Link href="/admin/" className="flex items-center gap-2 font-display font-extrabold text-white no-underline"><LogoMark size={28} />Back-office</Link>
-        <AdminNav groups={groups} />
-        <div className="mt-auto flex flex-col gap-1 border-t border-white/15 pt-3 text-sm">
-          <span className="text-white/60">{user.displayName} · {user.role === "admin" ? "administrador" : "editor"}</span>
-          <Link href="/" className="text-white/80">Ver o site</Link>
-          <Link href="/my-account/" className="text-white/80">Minha conta</Link>
-        </div>
+        <AdminNav
+          groups={groups}
+          brand={<Link href="/admin/" className="flex items-center gap-2 font-display font-extrabold text-white no-underline"><LogoMark size={28} />Back-office</Link>}
+          footer={
+            <div className="mt-auto flex flex-col gap-1 border-t border-white/15 pt-3 text-sm">
+              <span className="text-white/60">{user.displayName} · {user.role === "admin" ? "administrador" : "editor"}</span>
+              <Link href="/" className="text-white/80">Ver o site</Link>
+              <Link href="/my-account/" className="text-white/80">Minha conta</Link>
+            </div>
+          }
+        />
       </aside>
       <main className="min-w-0 flex-1 bg-bg p-4 md:p-8">{children}</main>
     </div>

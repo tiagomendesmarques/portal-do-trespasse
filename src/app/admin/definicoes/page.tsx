@@ -54,7 +54,7 @@ export default async function AdminSettings() {
       <AdminForm action={saveSettingsAction} submit="Guardar definições">
         {GROUPS.map((g) => (
           <fieldset key={g.title} className="panel grid gap-4 md:grid-cols-2">
-            <legend className="float-left mb-1 w-full font-display text-lg font-bold">{g.title}</legend>
+            <legend className="float-left mb-1 w-full font-display text-lg font-bold md:col-span-2">{g.title}</legend>
             {g.items.map(([key, label, hint]) => {
               const def = SETTINGS_DEFAULTS[key];
               const v = values[key] as unknown;

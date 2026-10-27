@@ -12,7 +12,7 @@ export function AdminHeader({ title, intro, actions, crumbs }: { title: string; 
         <h1 className="text-2xl font-extrabold">{title}</h1>
         {intro && <p className="mt-1 max-w-[70ch] text-sm text-muted">{intro}</p>}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </header>
   );
 }

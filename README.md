@@ -43,6 +43,7 @@ npx tsx scripts/e2e-fixtures.ts            # utilizadores de teste (só desenvol
 node e2e/auth-flow.mjs http://localhost:3000
 node e2e/public-flow.mjs http://localhost:3000     # precisa dos anúncios importados
 node e2e/advertiser-flow.mjs http://localhost:3000 # publicar, editar, favoritos, conta
+node e2e/admin-flow.mjs http://localhost:3000      # back-office: moderação, utilizadores, emails…
 node e2e/url-coverage.mjs http://localhost:3000    # os 415 URLs do WordPress
 ```
 
