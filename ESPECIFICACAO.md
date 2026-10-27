@@ -182,22 +182,53 @@ Os campos devem ser **configuráveis no back-office** (rótulo, tipo, opções, 
 - Guardar rascunho automático.
 - Ao enviar: estado pendente, email ao anunciante e aos administradores. Editar um anúncio publicado volta a pô-lo em revisão (configurável).
 
-### Back-office (`/admin`, só administradores)
-- Moderação: aprovar/rejeitar (com motivo enviado por email).
-- Anúncios: pesquisar, editar, despublicar, destacar, apagar.
-- Utilizadores: listar, bloquear, mudar perfil, apagar.
-- Denúncias e mensagens de contacto.
-- Categorias, localizações, tipos de anúncio, campos personalizados.
-- Blog e páginas (editor simples com SEO: título, descrição, slug, imagem).
-- Redirects.
-- Definições: validade dos anúncios, moderação ligada/desligada, limite de fotos, emails.
-- Planos pagos (destaque): modelo preparado, **desligado**.
+### Back-office (`/admin`, só administradores e editores)
+Substitui o wp-admin por completo. O dono não deve precisar de mais nenhuma ferramenta para gerir o site.
+
+- **Painel:** anúncios por aprovar, publicados, a expirar nos próximos 7 dias, novos registos, denúncias abertas, visitas e contactos dos últimos 30 dias.
+- **Moderação:** fila de anúncios novos e editados; pré-visualizar como o público os vê; aprovar ou rejeitar com motivo (texto livre ou motivos pré-definidos), que segue por email ao anunciante. Ver o que mudou numa edição.
+- **Anúncios:** pesquisa e filtros (estado, categoria, tipo, distrito, anunciante, datas); editar qualquer campo e as fotos; despublicar, marcar como vendido, prolongar validade, destacar, apagar; ações em massa (renovar, apagar).
+- **Utilizadores:** pesquisa; ver perfil, anúncios e histórico; mudar perfil (anunciante, editor, administrador); bloquear/desbloquear; reenviar verificação; enviar ligação de reposição de password; apagar (com os anúncios); entrar como o utilizador para dar suporte (com registo de auditoria).
+- **Denúncias:** fila com o anúncio, o motivo e quem denunciou; resolver, despublicar o anúncio ou bloquear o anunciante.
+- **Mensagens:** formulário de contactos do site e contactos aos anunciantes (para detetar abuso).
+- **Conteúdos:** categorias (nome, slug, ícone, ordem), localizações, tipos de anúncio, campos personalizados (secção 5), blog e páginas (editor rico, imagem de destaque, SEO: título, descrição, slug, canonical), FAQ.
+- **Emails:** editar assunto e texto de cada modelo (secção seguinte) com variáveis; enviar email de teste; registo dos emails enviados com estado (enviado, falhado, devolvido).
+- **Redirects:** lista de 301 (origem → destino) com contador de acessos.
+- **Definições:** moderação ligada/desligada, validade dos anúncios (120 dias), dias de aviso antes de expirar (3), apagar expirados ao fim de N dias (365), máx. fotos (9) e tamanho (3 MB), limites de caracteres, anúncios grátis por utilizador, email e nome do remetente, emails do administrador que recebem avisos, textos da faixa de anúncio/manutenção.
+- **Planos pagos (destaque, top, bump up):** modelo preparado, **desligado**.
+- **Auditoria:** quem aprovou, rejeitou, editou ou apagou o quê, e quando.
 
 ### Páginas institucionais
 FAQ (10 perguntas da `/faq-2/`), Como vender, Programa de ajuda, Promove o teu anúncio, Como manter-me seguro, Termos, Privacidade, Contactos (nome, email, mensagem). Texto atual no protótipo e em `prototipo/portal-do-trespasse.html`. Página "Sobre nós" a escrever.
 
 ### Emails transacionais
-Boas-vindas/verificação, recuperação de password, anúncio recebido, aprovado, rejeitado, a expirar, expirado, nova mensagem de interessado, nova denúncia (admin), novo anúncio por aprovar (admin), contacto do site (admin).
+Hoje o WordPress envia estes emails com assunto em português mas **texto em inglês** ("Dear {name}, Your submission…"). No site novo ficam todos em português de Portugal, em HTML simples com a marca, editáveis no back-office.
+
+| Evento | Para o utilizador | Para o administrador | Notas |
+|---|---|---|---|
+| Registo | Confirme o seu email (ligação válida 48 h) | Novo registo | Sem verificação não pode publicar. Reenvio limitado a 3. |
+| Email confirmado | Bem-vindo, como publicar o primeiro anúncio | | |
+| Recuperar password | Ligação para nova password (válida 1 h) | | |
+| Password ou email alterados | Aviso de segurança | | |
+| Anúncio enviado | "Recebemos o seu anúncio, a revisão demora até 48 h" | Novo anúncio por aprovar (com ligação direta) | |
+| Anúncio editado | "Alterações em revisão" | Anúncio editado por aprovar | |
+| Anúncio aprovado | "O seu anúncio está publicado" + ligação | | |
+| Anúncio rejeitado | Motivo e como corrigir | | Novo, não existe hoje |
+| A expirar | 3 dias antes, com botão Renovar | | |
+| Expirado | Expirou + botão Renovar | Anúncio expirado | |
+| Lembrete de renovação | 3 dias depois de expirar | | |
+| Contacto de interessado | Nome, email, telefone e mensagem do interessado (responder vai direto para ele) | Cópia opcional | Responder-para = email do interessado |
+| Denúncia | | Nova denúncia | |
+| Formulário de contactos | Confirmação de receção | Nova mensagem | |
+| Conta apagada | Confirmação | | RGPD |
+| Utilizador migrado (opcional) | "O Portal do Trespasse mudou": a password mantém-se | | Enviar só no dia da mudança, se o dono quiser |
+
+Regras:
+- Remetente "Portal do Trespasse" em `@portaldotrespasse.pt`, com SPF, DKIM e DMARC configurados.
+- Os emails para administradores vão para uma lista configurável (hoje: o email de administrador do WordPress e mais um).
+- **Staging: nenhum email sai.** Ficam só no registo do back-office, com pré-visualização.
+- Os envios passam por uma fila com novas tentativas; os falhados aparecem no back-office.
+- Ligação para cancelar avisos não essenciais (lembretes) no perfil.
 
 ## 7. Problemas encontrados no site atual
 
@@ -220,7 +251,7 @@ Fonte preferida: **dump da base de dados MySQL** do WordPress + pasta `wp-conten
 - Imagens: `wp-content/uploads/classified-listing/{ano}/{mês}/` → bucket.
 - Utilizadores: `wp_users` + `wp_usermeta` (telefone em `_rtcl_phone`, WhatsApp `_rtcl_whatsapp_number`, website `_rtcl_website`, morada `_rtcl_address`, código postal `_rtcl_zipcode`, localização `_rtcl_location`; perfil em `wp_capabilities`). Guardar `wp_user_id` para ligar anúncios (`post_author`).
   - **Passwords:** 914 contas com `$wp$2y$…` (WP ≥ 6.8: bcrypt sobre base64(HMAC-SHA384(password, chave "wp-sha384"))) e 9 com phpass `$P$…`. Verificar os dois formatos no 1.º login e voltar a gerar o hash no formato novo. Não há contas com MD5 nem login social (`wp_social_users` vazio).
-  - **Contas reais vs. spam:** 923 contas, mas **860 nunca verificaram o email** (têm `rtcl_verification_key`) e 848 foram criadas em julho–agosto de 2026 (vaga de registos automáticos). Só **63 estão verificadas**, e incluem os 17 anunciantes e as 4 contas da equipa (2 administradores, 1 editor, 1 autor). Proposta: migrar as 63 verificadas; as não verificadas ficam de fora (nunca puderam publicar). Decisão do dono.
+  - **Contas reais vs. spam:** 923 contas, mas **860 nunca verificaram o email** (têm `rtcl_verification_key`) e 848 foram criadas em julho–agosto de 2026 (vaga de registos automáticos). Só **63 estão verificadas**, e incluem os 17 anunciantes e as 4 contas da equipa (2 administradores, 1 editor, 1 autor). **Decisão (27/10/2026): migrar só as 63 verificadas**; as não verificadas ficam de fora (nunca puderam publicar).
   - 27 contas usam o email como nome de utilizador e nome público: gerar nome público a partir do primeiro nome ou de "Anunciante".
 - Anúncios: 17 publicados + 5 expirados (`rtcl-expired`, migrar como expirados). Tipo em `ad_type`, preço em `price`, `price_type`, `_rtcl_price_unit`, telefone `phone`, características `classima_spec_info`, ordem das fotos `_rtcl_attachments_order`, visitas `_views`, validade `expiry_date`, horário `_rtcl_bhs`. **9 anúncios expiram a 4/11/2026.**
 - Estatísticas: `wp_rtcl_listing_stats` (666 linhas) com visitas e cliques; migrar como contadores.
