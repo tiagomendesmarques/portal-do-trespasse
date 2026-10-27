@@ -25,7 +25,10 @@ export async function POST(req: Request) {
   if (!meta?.format || !FORMATS.has(meta.format)) return Response.json({ error: "Formato não suportado. Use JPG, PNG ou WEBP." }, { status: 415 });
   if ((meta.width ?? 0) < 300 || (meta.height ?? 0) < 200) return Response.json({ error: "A imagem é demasiado pequena (mínimo 300 × 200 píxeis)." }, { status: 422 });
 
-  const key = `listings/u${user.id}/${randomUUID()}`;
+  // A equipa também carrega imagens de destaque do blog.
+  const isStaff = user.role === "admin" || user.role === "editor";
+  const folder = new URL(req.url).searchParams.get("tipo") === "blog" && isStaff ? "blog" : "listings";
+  const key = `${folder}/u${user.id}/${randomUUID()}`;
   const dims = await storeImage(key, buf);
   return Response.json({ key, url: mediaUrl(key, 400), ...dims });
 }
