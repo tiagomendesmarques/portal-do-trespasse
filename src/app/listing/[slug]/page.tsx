@@ -122,6 +122,15 @@ export default async function ListingPage({ params }: Props) {
             fallback={<div className="grid size-full place-items-center font-display text-6xl font-extrabold text-navy/30" style={{ background: CATEGORY_HUE[d.category.slug] }}>{initials(d.category.name)}</div>}
           />
 
+          {/* No telemóvel a coluna lateral fica no fim: mostra já o preço e um atalho para o contacto. */}
+          <div className="panel flex items-center justify-between gap-3 lg:hidden">
+            <div className="flex flex-col">
+              <Price price={l.price} priceType={l.priceType} priceUnit={l.priceUnit} />
+              {renda && <span className="text-xs text-muted">renda {renda.display}/mês</span>}
+            </div>
+            <a href="#anunciante" className="btn-primary">Contactar</a>
+          </div>
+
           {d.fields.length > 0 && (
             <section>
               <h2 className="mb-3 text-2xl font-bold">Visão geral</h2>
@@ -182,7 +191,7 @@ export default async function ListingPage({ params }: Props) {
             </span>
           </div>
 
-          <div className="panel flex flex-col gap-3">
+          <div id="anunciante" className="panel flex scroll-mt-20 flex-col gap-3">
             <h2 className="font-sans text-base font-bold">Anunciante</h2>
             <div className="flex items-center gap-3">
               <span className="grid size-11 flex-none place-items-center rounded-full bg-wash font-display font-extrabold text-accent">{initials(d.author.displayName)}</span>

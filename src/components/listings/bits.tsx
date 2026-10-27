@@ -16,7 +16,7 @@ export function Price({ price, priceType, priceUnit, size = "md" }: { price: num
   const p = formatPrice(price, priceType, priceUnit);
   return (
     <span className="whitespace-nowrap">
-      <span className={`font-display font-extrabold tabular-nums tracking-tight ${size === "lg" ? "text-3xl" : "text-xl"}`}>{p.amount}</span>
+      <span data-price={price ?? ""} className={`font-display font-extrabold tabular-nums tracking-tight ${size === "lg" ? "text-3xl" : "text-xl"}`}>{p.amount}</span>
       {p.note && <span className="ml-1.5 text-xs font-medium text-muted">{p.note}</span>}
     </span>
   );

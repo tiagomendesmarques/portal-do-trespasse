@@ -24,6 +24,29 @@ Os emails não são enviados em desenvolvimento: ficam registados e podem ser li
 
 Alterar a base de dados: editar `src/db/schema.ts` e correr `npm run db:generate`.
 
+### Importar do WordPress
+
+Com o dump SQL do phpMyAdmin e a pasta `wp-content/uploads` (nunca dentro do repositório):
+
+```bash
+npx tsx scripts/wp-import.ts --sql /caminho/dump.sql --uploads /caminho/wp-content
+```
+
+Importa os utilizadores verificados, os anúncios (com campos e fotos) e os artigos do blog.
+Pode correr várias vezes: atualiza pelo ID do WordPress e não mexe em passwords já convertidas.
+
+### Testes
+
+```bash
+npm test                                   # unitários
+npx tsx scripts/e2e-fixtures.ts            # utilizadores de teste (só desenvolvimento)
+node e2e/auth-flow.mjs http://localhost:3000
+node e2e/public-flow.mjs http://localhost:3000     # precisa dos anúncios importados
+node e2e/url-coverage.mjs http://localhost:3000    # os 415 URLs do WordPress
+```
+
+Em desenvolvimento, as imagens ficam em `MEDIA_DIR` (por omissão `./.data/media`).
+
 ## Staging no Google Cloud (uma vez)
 
 Região sugerida `europe-west1`. Substitua `PROJETO` pelo ID do projeto.
