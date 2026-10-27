@@ -1,5 +1,5 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join, normalize } from "node:path";
+import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { dirname, join, normalize, sep } from "node:path";
 import sharp from "sharp";
 
 /**
@@ -9,11 +9,12 @@ import sharp from "sharp";
 export const IMAGE_WIDTHS = [400, 800, 1600] as const;
 export type ImageWidth = (typeof IMAGE_WIDTHS)[number];
 
-const MEDIA_DIR = process.env.MEDIA_DIR ?? "./.data/media";
+// Lido a cada chamada (e não ao carregar o módulo), para os scripts e testes poderem mudá-lo.
+const mediaDir = () => process.env.MEDIA_DIR ?? "./.data/media";
 
 function pathFor(file: string) {
-  const p = normalize(join(MEDIA_DIR, file));
-  if (!p.startsWith(normalize(MEDIA_DIR))) throw new Error("caminho inválido");
+  const p = normalize(join(/*turbopackIgnore: true*/ mediaDir(), file));
+  if (!p.startsWith(normalize(mediaDir()))) throw new Error("caminho inválido");
   return p;
 }
 
@@ -45,4 +46,27 @@ export function mediaUrl(key: string, width: ImageWidth = 800): string {
 
 export function mediaSrcSet(key: string): string {
   return IMAGE_WIDTHS.map((w) => `${mediaUrl(key, w)} ${w}w`).join(", ");
+}
+
+/** Chaves (sem "-{w}.webp") de todas as imagens guardadas, com a data do ficheiro mais recente. */
+export async function listMediaKeys(): Promise<Map<string, Date>> {
+  const keys = new Map<string, Date>();
+  let entries: string[];
+  try {
+    entries = await readdir(/*turbopackIgnore: true*/ mediaDir(), { recursive: true });
+  } catch {
+    return keys;
+  }
+  for (const rel of entries) {
+    const m = rel.split(sep).join("/").match(/^(.+)-(\d+)\.webp$/);
+    if (!m) continue;
+    const { mtime } = await stat(pathFor(rel));
+    const prev = keys.get(m[1]);
+    if (!prev || mtime > prev) keys.set(m[1], mtime);
+  }
+  return keys;
+}
+
+export async function deleteMedia(key: string) {
+  await Promise.all(IMAGE_WIDTHS.map((w) => rm(pathFor(`${key}-${w}.webp`), { force: true })));
 }

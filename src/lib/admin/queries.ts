@@ -116,4 +116,5 @@ export const AUDIT_LABEL: Record<string, string> = {
   "report.resolve": "Resolveu a denúncia", "settings.update": "Alterou definições", "email.update": "Alterou o modelo de email",
   "page.update": "Editou a página", "post.update": "Editou o artigo", "post.create": "Criou o artigo", "redirect.create": "Criou redirect", "redirect.delete": "Apagou redirect",
   "category.update": "Editou a categoria", "field.update": "Editou o campo",
+  "cron.daily": "Tarefas diárias", "cron.manual": "Correu as tarefas diárias",
 };

@@ -1,5 +1,10 @@
+import { desc, eq } from "drizzle-orm";
+import { getDb, schema } from "@/db";
 import { AdminForm, Check } from "@/components/admin/admin-form";
-import { AdminHeader } from "@/components/admin/ui";
+import { runDailyJobsAction } from "@/lib/admin/system-actions";
+import { relativeTime } from "@/lib/format";
+import type { DailyReport } from "@/lib/jobs/daily";
+import { ActionButton, AdminHeader } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin/guard";
 import { saveSettingsAction } from "@/lib/admin/content-actions";
 import { getSettings } from "@/lib/settings";
@@ -38,7 +43,11 @@ const GROUPS: { title: string; items: [SettingKey, string, string?][] }[] = [
 
 export default async function AdminSettings() {
   await requireAdmin();
-  const values = await getSettings(Object.keys(SETTINGS_DEFAULTS) as SettingKey[]);
+  const [values, lastRun] = await Promise.all([
+    getSettings(Object.keys(SETTINGS_DEFAULTS) as SettingKey[]),
+    getDb().query.auditLog.findFirst({ where: eq(schema.auditLog.action, "cron.daily"), orderBy: desc(schema.auditLog.id) }),
+  ]);
+  const report = lastRun?.data as DailyReport | undefined;
   return (
     <>
       <AdminHeader title="Definições" intro="Valores iniciais iguais às definições do WordPress." />
@@ -60,6 +69,21 @@ export default async function AdminSettings() {
           </fieldset>
         ))}
       </AdminForm>
+
+      <section className="panel mt-6 flex flex-col gap-3">
+        <h2 className="font-display text-lg font-bold">Tarefas diárias</h2>
+        <p className="text-sm text-muted">
+          Uma vez por dia: expira anúncios fora de prazo, envia os avisos de expiração e os lembretes, apaga anúncios expirados há mais de{" "}
+          {String(values["listings.deleteExpiredAfterDays"])} dias, fotografias sem anúncio e sessões antigas.
+        </p>
+        {lastRun && report ? (
+          <p className="text-sm" data-testid="cron-last-run">
+            Última vez {relativeTime(lastRun.createdAt)}: {report.expired} expirado(s), {report.warned} aviso(s), {report.reminded} lembrete(s), {report.deleted} apagado(s), {report.orphanImages} fotografia(s) removida(s).
+            {report.errors.length > 0 && <span className="text-danger"> Erros: {report.errors.join("; ")}</span>}
+          </p>
+        ) : <p className="text-sm text-muted">Ainda não correu.</p>}
+        <div><ActionButton action={runDailyJobsAction} fields={{}} label="Correr agora" tone="primary" /></div>
+      </section>
     </>
   );
 }

@@ -72,7 +72,7 @@ Região sugerida `europe-west1`. Substitua `PROJETO` pelo ID do projeto.
      --add-cloudsql-instances PROJETO:europe-west1:pdt-staging \
      --set-env-vars SITE_ENV=staging,SITE_URL=https://staging.portaldotrespasse.pt,EMAIL_DRIVER=log \
      --set-env-vars "DATABASE_URL=postgres://portal:PASSWORD@/portal?host=/cloudsql/PROJETO:europe-west1:pdt-staging" \
-     --set-env-vars BASIC_AUTH_USER=equipa,BASIC_AUTH_PASSWORD=ESCOLHER
+     --set-env-vars BASIC_AUTH_USER=equipa,BASIC_AUTH_PASSWORD=ESCOLHER,CRON_SECRET=GERAR-32-CARACTERES
    ```
    (Para produção, mover a password da base de dados para o Secret Manager.)
 5. Gatilho: Cloud Build → Gatilhos → ligar o repositório GitHub → ficheiro `cloudbuild.yaml`.
@@ -80,5 +80,14 @@ Região sugerida `europe-west1`. Substitua `PROJETO` pelo ID do projeto.
 6. Domínio: Cloud Run → Gerir domínios personalizados → `staging.portaldotrespasse.pt`.
    Na Cloudflare, criar o registo CNAME indicado, com o proxy desligado (nuvem cinzenta)
    até o certificado ser emitido.
+7. Tarefas diárias (expirar anúncios, avisos de expiração, lembretes, limpezas), às 6h de Lisboa:
+   ```bash
+   gcloud services enable cloudscheduler.googleapis.com --project PROJETO
+   gcloud scheduler jobs create http pdt-staging-diario --location europe-west1 --project PROJETO \
+     --schedule "7 6 * * *" --time-zone "Europe/Lisbon" --http-method POST \
+     --uri https://staging.portaldotrespasse.pt/api/cron/daily/ \
+     --headers X-Cron-Secret=O-MESMO-CRON_SECRET --attempt-deadline 300s
+   ```
+   O resultado da última execução aparece em Back-office → Definições, onde também há o botão "Correr agora".
 
 O contentor aplica as migrações e os dados de referência ao arrancar.

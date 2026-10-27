@@ -17,7 +17,7 @@ export default async function AdminAudit({ searchParams }: { searchParams: Promi
     .select({ id: A.id, action: A.action, entity: A.entity, entityId: A.entityId, createdAt: A.createdAt, actor: schema.users.displayName })
     .from(A).leftJoin(schema.users, eq(schema.users.id, A.actorId))
     .where(tipo ? eq(A.entity, tipo) : undefined).orderBy(desc(A.id)).limit(300);
-  const tabs: [string, string][] = [["", "Tudo"], ["listing", "Anúncios"], ["user", "Utilizadores"], ["report", "Denúncias"], ["settings", "Definições"]];
+  const tabs: [string, string][] = [["", "Tudo"], ["listing", "Anúncios"], ["user", "Utilizadores"], ["report", "Denúncias"], ["settings", "Definições"], ["system", "Sistema"]];
   return (
     <>
       <AdminHeader title="Auditoria" intro="Quem fez o quê e quando (últimas 300 ações)." />

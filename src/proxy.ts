@@ -4,10 +4,13 @@ import { NextResponse, type NextRequest } from "next/server";
  * Staging: pede utilizador/password (Basic Auth) e marca tudo como noindex.
  * Ligado só quando BASIC_AUTH_USER e BASIC_AUTH_PASSWORD estão definidos.
  */
+// Saúde (Cloud Run) e tarefas agendadas (têm o seu próprio segredo) ficam fora da password.
+const PUBLIC_PATHS = ["/api/health", "/api/cron/"];
+
 export function proxy(req: NextRequest) {
   const user = process.env.BASIC_AUTH_USER;
   const pass = process.env.BASIC_AUTH_PASSWORD;
-  if (user && pass && req.nextUrl.pathname !== "/api/health/") {
+  if (user && pass && !PUBLIC_PATHS.some((x) => req.nextUrl.pathname.startsWith(x))) {
     const header = req.headers.get("authorization") ?? "";
     const [scheme, encoded] = header.split(" ");
     const [u, p] = scheme === "Basic" && encoded ? atob(encoded).split(":") : [];

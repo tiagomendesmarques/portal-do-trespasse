@@ -205,6 +205,7 @@ export const listings = pgTable(
     publishedAt: timestamp("published_at", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     expiryWarnedAt: timestamp("expiry_warned_at", { withTimezone: true }),
+    reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
     // Título + descrição + características, em minúsculas e sem acentos (ver lib/text.ts).
     searchText: text("search_text").notNull().default(""),
     ...timestamps,

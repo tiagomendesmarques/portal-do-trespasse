@@ -46,7 +46,7 @@ export async function listingAction(fd: FormData) {
   } else if (op === "renew" && ["published", "expired"].includes(listing.status)) {
     // Renovar mantém o conteúdo (já aprovado): volta a publicado por mais N dias.
     const now = new Date();
-    await db.update(L).set({ status: "published", publishedAt: listing.status === "expired" ? now : listing.publishedAt, expiresAt: new Date(now.getTime() + days * 86_400_000), expiryWarnedAt: null, updatedAt: now }).where(mine);
+    await db.update(L).set({ status: "published", publishedAt: listing.status === "expired" ? now : listing.publishedAt, expiresAt: new Date(now.getTime() + days * 86_400_000), expiryWarnedAt: null, reminderSentAt: null, updatedAt: now }).where(mine);
   } else if (op === "delete" && fd.get("confirm") === "on") {
     await db.delete(L).where(mine);
   } else {

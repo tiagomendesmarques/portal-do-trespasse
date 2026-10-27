@@ -77,10 +77,10 @@ export async function staffListingAction(fd: FormData) {
 
   if (op === "unpublish" && ["published", "sold"].includes(l.status)) set.status = "pending";
   else if (op === "sold" && l.status === "published") set.status = "sold";
-  else if (op === "republish" && ["sold", "expired"].includes(l.status)) Object.assign(set, { status: "published", expiresAt: new Date(now.getTime() + days * 86_400_000) });
+  else if (op === "republish" && ["sold", "expired"].includes(l.status)) Object.assign(set, { status: "published", expiresAt: new Date(now.getTime() + days * 86_400_000), expiryWarnedAt: null, reminderSentAt: null });
   else if (op === "extend" && ["published", "expired"].includes(l.status)) {
     const from = l.expiresAt && l.expiresAt > now ? l.expiresAt : now;
-    Object.assign(set, { status: "published", expiresAt: new Date(from.getTime() + days * 86_400_000), expiryWarnedAt: null });
+    Object.assign(set, { status: "published", expiresAt: new Date(from.getTime() + days * 86_400_000), expiryWarnedAt: null, reminderSentAt: null });
   } else if (op === "feature") set.featuredUntil = new Date(now.getTime() + 30 * 86_400_000);
   else if (op === "unfeature") set.featuredUntil = null;
   else if (op === "delete" && fd.get("confirm") === "on") {
