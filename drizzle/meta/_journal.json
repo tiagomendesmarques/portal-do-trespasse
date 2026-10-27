@@ -15,6 +15,13 @@
       "when": 1793136279984,
       "tag": "0001_pesquisa",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793138113503,
+      "tag": "0002_seccoes-campos",
+      "breakpoints": true
     }
   ]
 }

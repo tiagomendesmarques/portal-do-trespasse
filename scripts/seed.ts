@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { sql } from "drizzle-orm";
 import { closeDb, getDb, schema } from "../src/db";
+import { EXTRA_FIELDS, WP_FIELD_SECTIONS } from "../src/content/extra-fields";
 import { PAGES } from "../src/content/pages";
 import { EMAIL_TEMPLATES } from "../src/lib/email/defaults";
 import { SETTINGS_DEFAULTS } from "../src/lib/settings-defaults";
@@ -100,6 +101,24 @@ for (const f of fields.filter((x) => x.condicao)) {
     .where(sql`${schema.customFields.wpId} = ${f.wp_id}`);
 }
 
+/* Secções dos campos do WordPress e campos novos (todos facultativos) */
+for (const [key, section] of Object.entries(WP_FIELD_SECTIONS)) {
+  await db.update(schema.customFields).set({ section }).where(sql`${schema.customFields.key} = ${key}`);
+}
+for (const [i, f] of EXTRA_FIELDS.entries()) {
+  const values = {
+    key: f.key, label: f.label, type: f.type, section: f.section, required: false,
+    options: (f.options ?? []).map(([value, label]) => ({ value, label })),
+    searchable: f.searchable ?? false, listable: true, help: f.help ?? null, placeholder: f.placeholder ?? null,
+    icon: f.icon ?? null, min: f.min ?? null, sort: 100 + i,
+  };
+  await db.insert(schema.customFields).values(values).onConflictDoUpdate({ target: schema.customFields.key, set: values });
+}
+for (const f of EXTRA_FIELDS.filter((x) => x.condition)) {
+  const dep = await db.query.customFields.findFirst({ where: (c, { eq }) => eq(c.key, f.condition!.key) });
+  await db.update(schema.customFields).set({ condition: { fieldId: dep!.id, operator: "==", value: f.condition!.value } }).where(sql`${schema.customFields.key} = ${f.key}`);
+}
+
 /* Definições */
 for (const [key, value] of Object.entries(SETTINGS_DEFAULTS)) {
   await db.insert(schema.settings).values({ key, value }).onConflictDoNothing();
@@ -132,5 +151,5 @@ for (const [fromPath, toPath, note] of REDIRECTS) {
   await db.insert(schema.redirects).values({ fromPath, toPath, note }).onConflictDoNothing();
 }
 
-console.log(`Seed concluído: ${TYPES.length} tipos, ${cats.length} categorias, ${locs.length} distritos, ${concelhos} concelhos, ${fields.length} campos, ${EMAIL_TEMPLATES.length} modelos de email, ${REDIRECTS.length} redirects, ${PAGES.length} páginas.`);
+console.log(`Seed concluído: ${TYPES.length} tipos, ${cats.length} categorias, ${locs.length} distritos, ${concelhos} concelhos, ${fields.length + EXTRA_FIELDS.length} campos, ${EMAIL_TEMPLATES.length} modelos de email, ${REDIRECTS.length} redirects, ${PAGES.length} páginas.`);
 await closeDb();

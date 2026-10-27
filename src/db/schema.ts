@@ -148,6 +148,8 @@ export const customFields = pgTable("custom_fields", {
   help: text("help"),
   placeholder: text("placeholder"),
   icon: text("icon"),
+  // Secção do formulário e da "Visão geral" (ver lib/listings/sections.ts).
+  section: text("section"),
   min: integer("min"),
   max: integer("max"),
   condition: jsonb("condition").$type<FieldCondition | null>(),

@@ -17,6 +17,7 @@ import { absoluteUrl } from "@/lib/site";
 import { mediaSrcSet, mediaUrl } from "@/lib/media";
 import { redirectOrNotFound } from "@/lib/redirects";
 import { excerpt } from "@/lib/text";
+import { FIELD_SECTIONS } from "@/lib/listings/sections";
 
 export const dynamic = "force-dynamic";
 
@@ -132,16 +133,25 @@ export default async function ListingPage({ params }: Props) {
           </div>
 
           {d.fields.length > 0 && (
-            <section>
-              <h2 className="mb-3 text-2xl font-bold">Visão geral</h2>
-              <dl className="grid overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2" style={{ gap: 1 }}>
-                {d.fields.map((f) => (
-                  <div key={f.id} className="flex flex-col gap-0.5 bg-surface px-4 py-3">
-                    <dt className="text-xs text-muted">{f.label}</dt>
-                    <dd className="font-semibold">{f.display}</dd>
+            <section className="flex flex-col gap-4">
+              <h2 className="text-2xl font-bold">Visão geral</h2>
+              {FIELD_SECTIONS.map((s) => {
+                const list = d.fields.filter((f) => (f.section ?? "funcionamento") === s.key);
+                if (!list.length) return null;
+                return (
+                  <div key={s.key}>
+                    <h3 className="mb-2 font-sans text-sm font-bold uppercase tracking-wider text-muted">{s.title}</h3>
+                    <dl className="grid overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2" style={{ gap: 1 }}>
+                      {list.map((f) => (
+                        <div key={f.id} className="flex flex-col gap-0.5 bg-surface px-4 py-3">
+                          <dt className="text-xs text-muted">{f.label}</dt>
+                          <dd className="font-semibold">{f.display}</dd>
+                        </div>
+                      ))}
+                    </dl>
                   </div>
-                ))}
-              </dl>
+                );
+              })}
             </section>
           )}
 

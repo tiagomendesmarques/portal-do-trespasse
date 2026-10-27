@@ -42,6 +42,7 @@ npm test                                   # unitários
 npx tsx scripts/e2e-fixtures.ts            # utilizadores de teste (só desenvolvimento)
 node e2e/auth-flow.mjs http://localhost:3000
 node e2e/public-flow.mjs http://localhost:3000     # precisa dos anúncios importados
+node e2e/advertiser-flow.mjs http://localhost:3000 # publicar, editar, favoritos, conta
 node e2e/url-coverage.mjs http://localhost:3000    # os 415 URLs do WordPress
 ```
 

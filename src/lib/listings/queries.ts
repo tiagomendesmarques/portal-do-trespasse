@@ -51,7 +51,7 @@ export const getCounts = cache(async () => {
 
 export type ListingCard = Awaited<ReturnType<typeof toCards>>[number];
 
-async function toCards(ids: number[]) {
+export async function toCards(ids: number[]) {
   if (!ids.length) return [];
   const db = getDb();
   const D = schema.locations;
