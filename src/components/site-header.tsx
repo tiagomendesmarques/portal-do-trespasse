@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/site";
 import { Logo } from "./logo";
+import { MobileMenu } from "./mobile-menu";
 
 const NAV = [
   { href: ROUTES.listings, label: "Anúncios" },
@@ -14,7 +15,8 @@ export async function SiteHeader() {
   const user = await getCurrentUser();
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-surface">
-      <div className="wrap flex h-16 items-center gap-5">
+      {/* relative: o menu móvel abre por baixo do cabeçalho */}
+      <div className="wrap relative flex h-16 items-center gap-5">
         <Logo />
         <nav className="hidden gap-1 md:flex" aria-label="Principal">
           {NAV.map((n) => (
@@ -33,6 +35,7 @@ export async function SiteHeader() {
             <Link href={ROUTES.account} className="btn-ghost">Entrar</Link>
           )}
           <Link href={ROUTES.post} className="btn-primary hidden sm:inline-flex">Publicar anúncio</Link>
+          <MobileMenu items={NAV} loggedIn={Boolean(user)} />
         </div>
       </div>
     </header>

@@ -50,3 +50,8 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.01em; text-wra
 @utility err { @apply text-xs font-medium text-danger; }
 @utility panel { @apply rounded-xl border border-line bg-surface p-5; }
 @utility eyebrow { @apply text-xs font-semibold uppercase tracking-wider text-muted; }
+
+/* Texto dos anúncios (HTML limitado pelo sanitizador). */
+.prose-listing ul { list-style: disc; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.25rem; }
+.prose-listing ol { list-style: decimal; padding-left: 1.25rem; }
+.prose-listing h2, .prose-listing h3 { font-size: 1.15rem; font-weight: 700; margin-top: 0.5rem; }
