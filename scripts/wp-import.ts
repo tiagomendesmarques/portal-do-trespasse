@@ -1,10 +1,14 @@
 // Importa do WordPress: utilizadores verificados, anúncios (com campos, fotos e estatísticas),
 // artigos do blog (publicados e rascunhos) e mensagens do formulário de contacto.
 // Uso: npx tsx scripts/wp-import.ts --sql <dump.sql> --uploads <pasta que contém uploads/>
-// Idempotente (atualiza por wp_id). Nunca substitui uma password já convertida no site novo.
+// Idempotente (atualiza por wp_id): pode ser corrida de novo com um dump mais recente.
+// - Contas e anúncios novos entram; os existentes são atualizados com os dados do WordPress.
+// - Passwords: atualizadas, exceto as de quem já entrou no site novo (já convertidas).
+// - Fotografias já importadas mantêm-se: basta enviar os uploads novos (ex.: só a pasta do mês).
+// - O que foi apagado no WordPress não é apagado aqui (no dia da mudança importa-se para uma base vazia).
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import sharp from "sharp";
 import { closeDb, getDb, schema } from "../src/db";
 import type { BusinessHours } from "../src/db/schema";
@@ -84,14 +88,20 @@ function autop(html: string): string {
 
 /* ---------- Imagens ---------- */
 const attachedFile = (attId: number) => pm(attId, "_wp_attached_file");
+// Dimensões das fotografias já importadas (para não precisar de novo do ficheiro original).
+const knownDims = new Map((await db.select().from(schema.listingImages)).map((i) => [i.storageKey, { width: i.width ?? 0, height: i.height ?? 0 }]));
 async function importImage(key: string, file: string): Promise<{ width: number; height: number } | null> {
   const full = join(uploadsDir, file);
-  if (!existsSync(full)) { warn(`imagem em falta: ${file}`); return null; }
+  // Já guardada no site novo: mantém-se, mesmo que desta vez só tenham sido enviados os uploads novos.
   if (await readMedia(`${key}-400.webp`)) {
     bump("imagens já existentes");
+    const known = knownDims.get(key);
+    if (known?.width) return known;
+    if (!existsSync(full)) return { width: 0, height: 0 };
     const meta = await sharp(readFileSync(full), { failOn: "none" }).metadata().catch(() => null);
     return { width: meta?.autoOrient?.width ?? meta?.width ?? 0, height: meta?.autoOrient?.height ?? meta?.height ?? 0 };
   }
+  if (!existsSync(full)) { warn(`imagem em falta: ${file}`); return null; }
   try {
     const dims = await storeImage(key, readFileSync(full));
     bump("imagens processadas");
@@ -104,7 +114,9 @@ async function importImage(key: string, file: string): Promise<{ width: number; 
 
 /* ---------- Utilizadores ---------- */
 console.log("Utilizadores…");
-const listingPosts = rows("wp_posts").filter((p) => p.post_type === "rtcl_listing" && ["publish", "rtcl-expired"].includes(String(p.post_status)));
+// "pending" = à espera de aprovação no WordPress: entra na fila de aprovação do back-office.
+const LISTING_STATUS: Record<string, "published" | "expired" | "pending"> = { publish: "published", "rtcl-expired": "expired", pending: "pending" };
+const listingPosts = rows("wp_posts").filter((p) => p.post_type === "rtcl_listing" && String(p.post_status) in LISTING_STATUS);
 const authors = new Set(listingPosts.map((p) => Number(p.post_author)));
 const userIdByWp = new Map<number, number>();
 const seenAccounts = new Map<string, number>(); // login e email já importados
@@ -148,7 +160,16 @@ for (const u of rows("wp_users")) {
   const [row] = await db
     .insert(schema.users)
     .values({ wpId, ...profile, passwordHash: String(u.user_pass), createdAt: registered })
-    .onConflictDoUpdate({ target: schema.users.wpId, set: { ...profile, updatedAt: new Date() } })
+    // A password do WordPress é atualizada (pode ter mudado lá), exceto se a pessoa já entrou no site novo
+    // (aí o hash já foi convertido para bcrypt "$2…" e é esse que vale).
+    .onConflictDoUpdate({
+      target: schema.users.wpId,
+      set: {
+        ...profile,
+        passwordHash: sql`case when ${schema.users.passwordHash} like '$2%' then ${schema.users.passwordHash} else excluded.password_hash end`,
+        updatedAt: new Date(),
+      },
+    })
     .returning({ id: schema.users.id });
   userIdByWp.set(wpId, row.id);
   seenAccounts.set(profile.username.toLowerCase(), row.id);
@@ -207,7 +228,10 @@ for (const p of listingPosts) {
   const features = (specs?.specs ?? "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
   const title = decode(String(p.post_title)).trim();
   const description = autop(String(p.post_content ?? ""));
-  const publishedAt = wpDate(p.post_date_gmt) ?? wpDate(p.post_date);
+  const status = LISTING_STATUS[String(p.post_status)];
+  // Um anúncio pendente sem validade nunca foi publicado: a data e a validade nascem quando for aprovado.
+  const neverPublished = status === "pending" && !pm(wpId, "expiry_date");
+  const publishedAt = neverPublished ? null : (wpDate(p.post_date_gmt) ?? wpDate(p.post_date));
   const expiresAt = wpDate(pm(wpId, "expiry_date")) ?? (publishedAt && new Date(publishedAt.getTime() + 120 * 86_400_000));
   const video = maybeUnserialize(pm(wpId, "_rtcl_video_urls"));
 
@@ -231,7 +255,7 @@ for (const p of listingPosts) {
     zipcode: pm(wpId, "zipcode") || null,
     videoUrls: Array.isArray(video) ? (video as string[]).filter(Boolean) : [],
     businessHours: businessHours(maybeUnserialize(pm(wpId, "_rtcl_bhs"))),
-    status: (p.post_status === "publish" ? "published" : "expired") as "published" | "expired",
+    status,
     views: Number(pm(wpId, "_views") ?? 0) || 0,
     phoneClicks: Math.max(Number(pm(wpId, "_rtcl_phone_click") ?? 0) || 0, phoneStats.get(wpId) ?? 0),
     publishedAt,
@@ -245,7 +269,7 @@ for (const p of listingPosts) {
     .values({ wpId, ...values })
     .onConflictDoUpdate({ target: schema.listings.wpId, set: values })
     .returning({ id: schema.listings.id });
-  bump(values.status === "published" ? "anúncios publicados" : "anúncios expirados");
+  bump({ published: "anúncios publicados", expired: "anúncios expirados", pending: "anúncios por aprovar" }[status]);
 
   // Campos personalizados: _field_{wpId}, uma linha por valor nas checkboxes.
   await db.delete(schema.listingFieldValues).where(eq(schema.listingFieldValues.listingId, listing.id));

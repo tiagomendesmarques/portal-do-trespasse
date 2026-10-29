@@ -112,6 +112,15 @@ rm -rf ~/wp                                   # dados pessoais: apagar no fim
 
 Entrar no back-office com a conta de administrador do WordPress (mesma password).
 
+### Atualizar o dev com dados mais recentes do WordPress
+
+Exportar um dump novo (phpMyAdmin) e correr o mesmo `gcp-import.sh`. Pode ser repetido sempre que quiser:
+- Contas e anúncios novos entram. Os anúncios à espera de aprovação no WordPress vão para a fila do back-office.
+- Os existentes são atualizados.
+- Passwords mudadas no WordPress passam, exceto as de quem já entrou no site novo.
+- Fotografias já importadas mantêm-se. Basta enviar os uploads **novos** (ex.: só `uploads/2026/11/`); a pasta tem de manter a estrutura `uploads/ANO/MÊS/`.
+- O que foi apagado no WordPress não desaparece do dev. No dia da mudança a produção começa com a base vazia, por isso fica exata.
+
 A produção faz-se no dia da mudança com os mesmos scripts e `production` (ver [docs/MIGRACAO.md](docs/MIGRACAO.md)).
 
 Para fazer estes passos com o Claude no Chrome: [docs/PROMPT_CHROME_DEV.md](docs/PROMPT_CHROME_DEV.md).

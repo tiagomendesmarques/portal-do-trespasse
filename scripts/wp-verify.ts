@@ -39,7 +39,8 @@ const UM = meta("wp_usermeta", "user_id");
 const pm = (id: number, k: string) => PM.get(id)?.get(k)?.[0];
 const pmAll = (id: number, k: string) => (PM.get(id)?.get(k) ?? []).filter((v) => v !== "");
 
-const wpListings = rows("wp_posts").filter((p) => p.post_type === "rtcl_listing" && ["publish", "rtcl-expired"].includes(String(p.post_status)));
+const LISTING_STATUS: Record<string, string> = { publish: "published", "rtcl-expired": "expired", pending: "pending" };
+const wpListings = rows("wp_posts").filter((p) => p.post_type === "rtcl_listing" && String(p.post_status) in LISTING_STATUS);
 const authors = new Set(wpListings.map((p) => Number(p.post_author)));
 const wpUsers = rows("wp_users").filter((u) => !UM.get(Number(u.ID))?.get("rtcl_verification_key")?.[0] || authors.has(Number(u.ID)));
 // Contas duplicadas (mesmo login ou email) são juntadas na primeira pelo importador.
@@ -108,7 +109,7 @@ for (const p of wpListings) {
   const l = listingByWp.get(wpId);
   if (!l) { problems.falta.push(wpId); continue; }
   if (l.slug !== String(p.post_name)) problems.slug.push(wpId);
-  if (l.status !== (p.post_status === "publish" ? "published" : "expired")) problems.estado.push(wpId);
+  if (l.status !== LISTING_STATUS[String(p.post_status)]) problems.estado.push(wpId);
   if (wpIdOfUser.get(l.userId) !== canonical.get(Number(p.post_author))) problems.dono.push(wpId);
   const tx = termsOf(wpId);
   const cat = tx.find((t) => t.taxonomy === "rtcl_category");
@@ -126,7 +127,7 @@ for (const p of wpListings) {
   if (values.filter((v) => v.listingId === l.id).length !== expectedValues) problems.campos.push(wpId);
 }
 const LABEL: Record<string, string> = {
-  falta: "todos os anúncios migrados", slug: "endereços (slug) iguais", estado: "estado igual (publicado/expirado)", dono: "cada anúncio ligado ao mesmo dono",
+  falta: "todos os anúncios migrados", slug: "endereços (slug) iguais", estado: "estado igual (publicado/expirado/por aprovar)", dono: "cada anúncio ligado ao mesmo dono",
   categoria: "categoria igual", localizacao: "localização igual", preco: "preço igual", fotos: "número de fotografias igual", ficheiros: "ficheiros das fotografias nos 3 tamanhos", campos: "campos do formulário migrados",
 };
 for (const [k, list] of Object.entries(problems)) check(`${LABEL[k]} (${wpListings.length})`, list.length === 0, list.length ? `WP ${ids(list)}` : "");
