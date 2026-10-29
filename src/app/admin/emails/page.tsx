@@ -3,10 +3,10 @@ import { asc, desc, eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { AdminHeader, Table } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin/guard";
+import { EMAIL_DRIVER } from "@/lib/email/send";
 import { relativeTime } from "@/lib/format";
 
 export const metadata = { title: "Emails" };
-const DRIVER = process.env.EMAIL_DRIVER === "resend" ? "resend" : "log";
 
 export default async function AdminEmails({ searchParams }: { searchParams: Promise<{ estado?: string }> }) {
   await requireAdmin();
@@ -18,7 +18,7 @@ export default async function AdminEmails({ searchParams }: { searchParams: Prom
   ]);
   return (
     <>
-      <AdminHeader title="Emails" intro={DRIVER === "log" ? "Modo de registo: os emails NÃO são enviados, só ficam guardados aqui (staging e desenvolvimento)." : "Os emails são enviados pelo Resend."} />
+      <AdminHeader title="Emails" intro={EMAIL_DRIVER === "log" ? "Modo de registo: os emails NÃO são enviados, só ficam guardados aqui (desenvolvimento)." : process.env.EMAIL_ONLY_TO ? `Staging: só são enviados emails para ${process.env.EMAIL_ONLY_TO}; os outros ficam só registados aqui.` : "Os emails são enviados por SMTP e ficam registados aqui."} />
       <section className="mb-6">
         <h2 className="mb-2 text-lg font-bold">Modelos</h2>
         <Table head={["Modelo", "Assunto", "Estado"]}>

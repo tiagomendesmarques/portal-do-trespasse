@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
-  serverExternalPackages: ["@electric-sql/pglite"],
+  serverExternalPackages: ["@electric-sql/pglite", "@google-cloud/storage"],
   // Os URLs do WordPress terminam em "/" e mantêm-se iguais.
   trailingSlash: true,
   // O código lê ficheiros por caminhos dinâmicos (imagens, PGlite) e o tracing copiaria a pasta toda.

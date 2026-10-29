@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import nodemailer, { type Transporter } from "nodemailer";
 import { getDb, schema } from "@/db";
 import { getSetting } from "@/lib/settings";
 import { EMAIL_TEMPLATES } from "./defaults";
@@ -6,8 +7,31 @@ import { renderEmail, type Vars } from "./render";
 
 type Message = { to: string; subject: string; html: string; text: string; replyTo?: string; templateKey?: string };
 
-const DRIVER = process.env.EMAIL_DRIVER === "resend" ? "resend" : "log";
-const FROM = process.env.EMAIL_FROM ?? "Portal do Trespasse <naoresponder@portaldotrespasse.pt>";
+/** "smtp" envia (produção); "log" só regista no back-office (desenvolvimento e staging). */
+export const EMAIL_DRIVER = process.env.EMAIL_DRIVER === "smtp" ? "smtp" : "log";
+const FROM_ADDRESS = process.env.EMAIL_FROM_ADDRESS ?? process.env.SMTP_USER ?? "geral@portaldotrespasse.pt";
+/**
+ * Staging: só envia de verdade para estes endereços (separados por vírgulas); os restantes ficam
+ * só registados. Assim testa-se o SMTP sem escrever aos utilizadores reais importados.
+ */
+const ONLY_TO = (process.env.EMAIL_ONLY_TO ?? "").split(",").map((a) => a.trim().toLowerCase()).filter(Boolean);
+export const canSendTo = (to: string) => EMAIL_DRIVER === "smtp" && (!ONLY_TO.length || ONLY_TO.includes(to.trim().toLowerCase()));
+
+let transport: Transporter | undefined;
+function smtp(): Transporter {
+  const port = Number(process.env.SMTP_PORT ?? 465);
+  transport ??= nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port,
+    secure: port === 465, // 465 = TLS desde o início; 587 = STARTTLS
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
+    pool: true,
+    maxConnections: 2,
+    connectionTimeout: 15_000,
+    socketTimeout: 30_000,
+  });
+  return transport;
+}
 
 /**
  * Envia (ou só regista, com EMAIL_DRIVER=log) e guarda sempre em email_log.
@@ -18,21 +42,19 @@ export async function sendEmail(msg: Message): Promise<{ ok: boolean }> {
   let providerId: string | null = null;
   let error: string | null = null;
 
-  if (DRIVER === "resend") {
+  if (canSendTo(msg.to)) {
     try {
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: FROM, to: [msg.to], subject: msg.subject, html: msg.html, text: msg.text, reply_to: msg.replyTo }),
+      const fromName = await getSetting("email.fromName");
+      const info = await smtp().sendMail({
+        from: { name: fromName, address: FROM_ADDRESS },
+        to: msg.to,
+        replyTo: msg.replyTo,
+        subject: msg.subject,
+        html: msg.html,
+        text: msg.text,
       });
-      const body = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
-      if (res.ok) {
-        status = "sent";
-        providerId = body.id ?? null;
-      } else {
-        status = "failed";
-        error = `${res.status} ${body.message ?? ""}`.trim();
-      }
+      status = "sent";
+      providerId = info.messageId ?? null;
     } catch (e) {
       status = "failed";
       error = e instanceof Error ? e.message : String(e);

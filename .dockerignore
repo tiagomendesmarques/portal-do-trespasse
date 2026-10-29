@@ -7,3 +7,7 @@ e2e
 *.sql
 *.zip
 .git
+.env*
+docs
+deploy
+*.md

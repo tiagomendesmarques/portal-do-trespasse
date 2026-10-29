@@ -1,4 +1,6 @@
 # Cada push no ramo configurado no gatilho do Cloud Build constrói a imagem e faz deploy do staging.
+# Só troca a imagem: variáveis, segredos e base de dados ficam como o deploy/gcp-setup.sh os deixou.
+# (Para a produção, um segundo gatilho com _SERVICE=portal-do-trespasse-producao.)
 substitutions:
   _REGION: europe-west1
   _SERVICE: portal-do-trespasse-staging

@@ -1,0 +1,8 @@
+# O que NÃO é enviado para o Cloud Build (além de tudo o que o .gitignore exclui).
+#!include:.gitignore
+.git
+.gcloudignore
+prototipo/
+docs/
+e2e/
+*.md

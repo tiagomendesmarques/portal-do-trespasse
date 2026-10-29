@@ -1,10 +1,9 @@
 // Confirma a migração: compara o dump do WordPress com a base de dados nova, item a item.
 // Uso: npx tsx scripts/wp-verify.ts --sql <dump.sql>   (correr logo a seguir ao wp-import.ts)
 // Só mostra contagens e IDs (nunca emails, nomes ou passwords). Termina com erro se algo falhar.
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
 import { closeDb, getDb, schema } from "../src/db";
-import { IMAGE_WIDTHS } from "../src/lib/media";
+import { IMAGE_WIDTHS, listMediaFiles } from "../src/lib/media";
 import { maybeUnserialize } from "../src/lib/wp/php-unserialize";
 import { parseDump } from "../src/lib/wp/sql-dump";
 
@@ -14,7 +13,6 @@ if (!SQL) {
   console.error("Uso: npx tsx scripts/wp-verify.ts --sql <dump.sql>");
   process.exit(1);
 }
-const MEDIA_DIR = process.env.MEDIA_DIR ?? "./.data/media";
 
 const results: [string, string, string][] = [];
 const check = (name: string, ok: boolean, detail = "") => results.push([ok ? "OK   " : "FALHA", name, detail]);
@@ -78,7 +76,9 @@ const [users, listings, images, values, fields, cats, locs, posts, pages, messag
 ]);
 const userByWp = new Map(users.filter((u) => u.wpId).map((u) => [u.wpId!, u]));
 const wpIdOfUser = new Map(users.map((u) => [u.id, u.wpId]));
-const mediaOk = (key: string) => IMAGE_WIDTHS.every((w) => existsSync(join(MEDIA_DIR, `${key}-${w}.webp`)));
+// Pasta local ou bucket do Cloud Storage, conforme MEDIA_DRIVER.
+const mediaFiles = await listMediaFiles();
+const mediaOk = (key: string) => IMAGE_WIDTHS.every((w) => mediaFiles.has(`${key}-${w}.webp`));
 
 /* ---------- Utilizadores ---------- */
 const missingUsers = [...expectedUsers].filter((id) => !userByWp.has(id));

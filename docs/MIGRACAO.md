@@ -21,11 +21,13 @@ Os favoritos não existem no dump (nenhum utilizador tinha favoritos guardados).
 
 ## Antes do dia
 
-1. O staging (`staging.portaldotrespasse.pt`, fase 6) está a funcionar com uma importação recente e foi revisto.
-2. Escolher um dia e uma hora calmos (ex.: domingo de manhã). A mudança leva cerca de 1 hora.
-3. Na Cloudflare, baixar o TTL do registo de `portaldotrespasse.pt` para 5 minutos, pelo menos um dia antes.
-4. Decidir se vai enviar o email "O Portal do Trespasse tem um site novo" (passo 8). É opcional.
-5. Ter à mão: acesso ao painel do WordPress, ao phpMyAdmin, ao Google Cloud e à Cloudflare.
+1. O staging (`staging.portaldotrespasse.pt`) está a funcionar com uma importação recente e foi revisto.
+2. A produção já existe, ainda sem dados e sem tráfego: no Cloud Shell, `./deploy/gcp-setup.sh ID-DO-PROJETO production`
+   (cria a base `portal_producao`, o bucket, o serviço e a tarefa diária; mostra os registos DNS, que **só** se mudam no dia).
+3. Escolher um dia e uma hora calmos (ex.: domingo de manhã). A mudança leva cerca de 1 hora.
+4. Na Cloudflare, baixar o TTL do registo de `portaldotrespasse.pt` para 5 minutos, pelo menos um dia antes.
+5. Decidir se vai enviar o email "O Portal do Trespasse tem um site novo" (passo 8). É opcional.
+6. Ter à mão: acesso ao painel do WordPress, ao phpMyAdmin, ao Google Cloud (Cloud Shell) e à Cloudflare.
 
 ## No dia
 
@@ -39,20 +41,17 @@ Para não se perderem anúncios ou contas criados durante a mudança:
 - `wp-content/uploads` em ZIP (pelo gestor de ficheiros do alojamento), como da primeira vez.
 - **Nunca** pôr estes ficheiros no Git: têm dados pessoais.
 
-### 3. Importar para a base de dados de produção
-Num computador com o repositório e `npm ci` feito, e com o [Cloud SQL Auth Proxy](https://cloud.google.com/sql/docs/postgres/sql-proxy) ligado à instância de produção:
+### 3. Importar para a produção
+No Cloud Shell, carregar o dump e os uploads para uma pasta **fora** do repositório (ex.: `~/wp/`) e:
 
 ```bash
-export DATABASE_URL="postgres://portal:PASSWORD@127.0.0.1:5432/portal"
-export MEDIA_DIR="$PWD/.migracao/media"      # pasta local; vai para o Cloud Storage no passo 4
-npx tsx scripts/migrate.ts
-npx tsx scripts/seed.ts
-npx tsx scripts/wp-import.ts  --sql /caminho/dump.sql --uploads /caminho/pasta-com-uploads
-npx tsx scripts/wp-verify.ts  --sql /caminho/dump.sql
+cd portal-do-trespasse && git pull
+./deploy/gcp-import.sh ID-DO-PROJETO production ~/wp/dump.sql ~/wp/uploads-pasta
 ```
 
-- A importação demora cerca de 2 minutos. Pode ser repetida sem duplicar nada.
-- `wp-verify` compara o dump com a base nova, anúncio a anúncio:
+- Aplica as migrações e importa: contas, anúncios, fotografias (diretamente para o Cloud Storage), artigos e mensagens.
+- Demora poucos minutos e pode ser repetida sem duplicar nada.
+- No fim corre o `wp-verify`, que compara o dump com a base nova, anúncio a anúncio:
   - contas e passwords;
   - dono, categoria, localização, preço, campos e fotografias de cada anúncio;
   - artigos, imagens e mensagens.
@@ -60,24 +59,16 @@ npx tsx scripts/wp-verify.ts  --sql /caminho/dump.sql
 
 > Não correr `scripts/e2e-fixtures.ts` em produção (recusa-se a correr com `SITE_ENV=production`).
 
-### 4. Enviar as fotografias para o Cloud Storage
+### 4. Ligar o domínio ao site novo
+Na Cloudflare, substituir os registos de `portaldotrespasse.pt` e `www` pelos que o `gcp-setup.sh production` mostrou.
+- Nuvem **cinzenta** até o certificado ser emitido (15 min a 1 h).
+- O `www` redireciona para o endereço sem `www`.
+- A tarefa diária e os emails a sério (SMTP `geral@portaldotrespasse.pt`) já ficaram configurados.
+
+### 5. Apagar os ficheiros do WordPress do Cloud Shell
 ```bash
-gcloud storage rsync --recursive .migracao/media gs://BUCKET-DE-PRODUCAO
+rm -rf ~/wp
 ```
-(Nome do bucket definido na fase 6. O site serve as imagens com os mesmos endereços `/media/...`.)
-
-### 5. Ligar o domínio ao site novo
-No serviço Cloud Run de produção:
-- `SITE_ENV=production`
-- `SITE_URL=https://portaldotrespasse.pt`
-- `EMAIL_DRIVER=resend`
-- `BASIC_AUTH_*` vazios
-- `CRON_SECRET` definido
-
-Depois:
-- Cloud Run → Gerir domínios personalizados → `portaldotrespasse.pt` e `www.portaldotrespasse.pt`.
-- Na Cloudflare, apontar os registos indicados. Manter a nuvem cinzenta até o certificado ser emitido.
-- Criar a tarefa diária do Cloud Scheduler para o domínio de produção (README, passo 7).
 
 ### 6. Confirmar
 ```bash
@@ -96,8 +87,8 @@ E à mão:
 
 ### 8. (Opcional) Avisar os utilizadores
 ```bash
-npx tsx scripts/send-migration-notice.ts            # mostra quantos vão receber, não envia
-npx tsx scripts/send-migration-notice.ts --enviar   # envia; quem já recebeu não volta a receber
+./deploy/gcp-run.sh ID-DO-PROJETO production npx tsx scripts/send-migration-notice.ts            # só conta
+EMAIL_DRIVER=smtp ./deploy/gcp-run.sh ID-DO-PROJETO production npx tsx scripts/send-migration-notice.ts --enviar
 ```
 O texto edita-se em Back-office → Emails → "Mudança de site".
 

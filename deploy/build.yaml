@@ -1,0 +1,10 @@
+# Só constrói e publica a imagem (o deploy é feito pelo deploy/gcp-staging.sh, com a configuração completa).
+substitutions:
+  _IMAGE: ""
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "${_IMAGE}", "."]
+images:
+  - ${_IMAGE}
+options:
+  logging: CLOUD_LOGGING_ONLY

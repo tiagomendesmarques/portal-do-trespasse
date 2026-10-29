@@ -17,7 +17,7 @@ Stack:
 - PostgreSQL (Cloud SQL) com Drizzle ORM e migrações versionadas. Pesquisa com tsvector, dicionário português e unaccent.
 - Autenticação por email e password (bcrypt), sessões em cookie httpOnly, recuperação de password e verificação de email. Login com Google preparado mas desligado por variável de ambiente.
 - Imagens no Google Cloud Storage, redimensionadas com sharp para WebP (miniatura 400px, média 800px, grande 1600px).
-- Emails transacionais por um fornecedor configurável (começar com Resend), com templates em português.
+- Emails transacionais por SMTP (conta geral@portaldotrespasse.pt em smtp-pt.securemail.pro, porta 465; password só no Secret Manager), com templates em português.
 - Tailwind CSS. Cores da marca: #89d3cd e #000333. Tudo em português de Portugal.
 - Um único Dockerfile (output standalone), porta via $PORT, sem estado em disco. Healthcheck em /api/health.
 

@@ -272,4 +272,4 @@ Fonte preferida: **dump da base de dados MySQL** do WordPress + pasta `wp-conten
 - RGPD: aviso de cookies com consentimento antes do GTM; exportar e apagar dados do utilizador.
 - Anti-spam: rate limit em login, registo, contacto e denúncias; Turnstile ou reCAPTCHA no registo e contacto.
 - Acessibilidade AA, mobile-first.
-- Deploy em Google Cloud Run (container único), Cloud SQL Postgres, Cloud Storage para imagens, segredos no Secret Manager.
+- Deploy em Google Cloud Run (container único), Cloud SQL Postgres, Cloud Storage para imagens, segredos no Secret Manager, emails por SMTP (`geral@portaldotrespasse.pt`). Scripts em `deploy/` (ver README).

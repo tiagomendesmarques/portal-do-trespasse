@@ -14,7 +14,8 @@ const users = await db.select({ id: schema.users.id, email: schema.users.email, 
   .from(schema.users)
   .where(and(isNotNull(schema.users.wpId), eq(schema.users.status, "active")));
 const sent = new Set(
-  (await db.select({ to: schema.emailLog.to }).from(schema.emailLog).where(eq(schema.emailLog.templateKey, "migration_notice"))).map((r) => r.to.toLowerCase()),
+  // Só conta como avisado quem recebeu de facto (os registados em modo "log" ou falhados repetem).
+  (await db.select({ to: schema.emailLog.to }).from(schema.emailLog).where(and(eq(schema.emailLog.templateKey, "migration_notice"), eq(schema.emailLog.status, "sent")))).map((r) => r.to.toLowerCase()),
 );
 const todo = users.filter((u) => !sent.has(u.email.toLowerCase()));
 
@@ -22,12 +23,13 @@ console.log(`Contas vindas do WordPress: ${users.length}. Já avisadas: ${users.
 if (!SEND) {
   console.log("Nada foi enviado. Para enviar: --enviar");
 } else {
-  if (process.env.EMAIL_DRIVER !== "resend") console.log("Aviso: EMAIL_DRIVER não é \"resend\"; os emails ficam só registados.");
+  if (process.env.EMAIL_DRIVER !== "smtp") console.log("Aviso: EMAIL_DRIVER não é \"smtp\"; os emails ficam só registados.");
+  if (process.env.EMAIL_ONLY_TO) console.log(`Aviso: EMAIL_ONLY_TO está definido; só recebem ${process.env.EMAIL_ONLY_TO}.`);
   let ok = 0;
   for (const u of todo) {
     const r = await sendTemplate("migration_notice", u.email, { name: u.name, login_url: absoluteUrl(ROUTES.account), reset_request_url: absoluteUrl(ROUTES.lostPassword) });
     if (r.ok) ok++;
-    await new Promise((res) => setTimeout(res, 250)); // não exceder o limite do Resend
+    await new Promise((res) => setTimeout(res, 1000)); // devagar, para não exceder o limite do servidor SMTP
   }
   console.log(`Enviados: ${ok}. Falhados: ${todo.length - ok} (ver Back-office → Emails → registo).`);
 }
