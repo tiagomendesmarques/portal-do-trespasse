@@ -113,3 +113,5 @@ rm -rf ~/wp                                   # dados pessoais: apagar no fim
 Entrar no back-office com a conta de administrador do WordPress (mesma password).
 
 A produção faz-se no dia da mudança com os mesmos scripts e `production` (ver [docs/MIGRACAO.md](docs/MIGRACAO.md)).
+
+Para fazer estes passos com o Claude no Chrome: [docs/PROMPT_CHROME_DEV.md](docs/PROMPT_CHROME_DEV.md).
