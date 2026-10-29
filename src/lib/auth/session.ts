@@ -60,6 +60,10 @@ export async function destroyAllSessions(userId: number) {
   await getDb().delete(schema.sessions).where(eq(schema.sessions.userId, userId));
 }
 
+/**
+ * IP do visitante, para os limites de tentativas. No Cloud Run o Google acrescenta o IP real no FIM do
+ * X-Forwarded-For; o início pode ter sido escrito pelo próprio visitante (e serviria para contornar os limites).
+ */
 export function clientIp(h: Headers): string | null {
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || null;
+  return h.get("x-forwarded-for")?.split(",").at(-1)?.trim() || h.get("x-real-ip") || null;
 }

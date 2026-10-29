@@ -11,8 +11,9 @@ PROJECT="${1:?Uso: ./deploy/gcp-setup.sh ID-DO-PROJETO dev|production}"
 ENV="${2:?Indique o ambiente: dev ou production}"
 # SITE_ENV=staging = site de testes: pede password, não é indexado e só envia emails à equipa.
 case "$ENV" in
-  dev)        SUFFIX=dev;      DOMAIN=dev.portaldotrespasse.pt; SITE_ENV=staging;    BRANCH=dev ;;
-  production) SUFFIX=producao; DOMAIN=portaldotrespasse.pt;     SITE_ENV=production; BRANCH=main ;;
+  dev)        SUFFIX=dev;      DOMAIN=dev.portaldotrespasse.pt; SITE_ENV=staging;    BRANCH=dev;  MIN_INSTANCES=0 ;;
+  # Produção: uma instância sempre ligada (sem esperas no primeiro pedido; ~7 €/mês).
+  production) SUFFIX=producao; DOMAIN=portaldotrespasse.pt;     SITE_ENV=production; BRANCH=main; MIN_INSTANCES=1 ;;
   *) echo "Ambiente desconhecido: $ENV (dev ou production)"; exit 1 ;;
 esac
 GITHUB_OWNER=tiagomendesmarques
@@ -105,6 +106,8 @@ gcloud builds submit --config=deploy/build.yaml --substitutions="_IMAGE=${IMAGE}
 step "8/9 Deploy no Cloud Run"
 ENV_VARS="SITE_ENV=${SITE_ENV}|SITE_URL=https://${DOMAIN}|MEDIA_DRIVER=gcs|GCS_BUCKET=${BUCKET}|EMAIL_DRIVER=smtp|SMTP_HOST=${SMTP_HOST}|SMTP_PORT=465|SMTP_USER=${SMTP_USER}"
 SECRET_VARS="DATABASE_URL=${SECRET_PREFIX}-database-url:latest,SMTP_PASSWORD=pdt-smtp-password:latest,CRON_SECRET=${SECRET_PREFIX}-cron-secret:latest"
+# Estatísticas: o mesmo Google Tag Manager do WordPress, só em produção e só com consentimento.
+[ "$ENV" = production ] && ENV_VARS="${ENV_VARS}|GTM_ID=GTM-T6S7GRGN"
 if [ "$ENV" = dev ]; then
   # Site de testes: protegido por password e só envia emails a sério para EMAIL_ONLY_TO.
   ENV_VARS="${ENV_VARS}|BASIC_AUTH_USER=equipa|EMAIL_ONLY_TO=${ONLY_TO}"
@@ -113,7 +116,7 @@ fi
 # max-instances=1: as migrações correm no arranque e não devem correr em dois contentores ao mesmo tempo.
 gcloud run deploy "$SERVICE" --image="$IMAGE" --region="$REGION" --service-account="$SA" \
   --add-cloudsql-instances="${PROJECT}:${REGION}:${SQL_INSTANCE}" \
-  --allow-unauthenticated --min-instances=0 --max-instances=1 --memory=1Gi --cpu=1 --timeout=300 \
+  --allow-unauthenticated --min-instances="$MIN_INSTANCES" --max-instances=1 --memory=1Gi --cpu=1 --timeout=300 \
   --set-env-vars="^|^${ENV_VARS}" --set-secrets="${SECRET_VARS}"
 URL=$(gcloud run services describe "$SERVICE" --region="$REGION" --format='value(status.url)')
 # Os deploys automáticos (cloudbuild.yaml) precisam de poder usar a conta de serviço do site.

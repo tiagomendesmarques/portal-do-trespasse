@@ -123,4 +123,5 @@ Exportar um dump novo (phpMyAdmin) e correr o mesmo `gcp-import.sh`. Pode ser re
 
 A produção faz-se no dia da mudança com os mesmos scripts e `production` (ver [docs/MIGRACAO.md](docs/MIGRACAO.md)).
 
-Para fazer estes passos com o Claude no Chrome: [docs/PROMPT_CHROME_DEV.md](docs/PROMPT_CHROME_DEV.md).
+Para fazer estes passos com o Claude no Chrome: [docs/PROMPT_CHROME_DEV.md](docs/PROMPT_CHROME_DEV.md) (dev) e
+[docs/PROMPT_CHROME_PRODUCAO.md](docs/PROMPT_CHROME_PRODUCAO.md) (passar portaldotrespasse.pt para o site novo).

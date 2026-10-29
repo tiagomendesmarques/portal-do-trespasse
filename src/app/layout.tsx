@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Schibsted_Grotesk } from "next/font/google";
+import { CookieConsent } from "@/components/cookie-consent";
 import { EMAIL_DRIVER } from "@/lib/email/send";
 import { isProduction, SITE_ENV, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
@@ -26,6 +27,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         )}
         {children}
+        {/* Estatísticas (Google Tag Manager) só com GTM_ID definido (produção) e depois de o visitante aceitar. */}
+        {process.env.GTM_ID && <CookieConsent gtmId={process.env.GTM_ID} />}
       </body>
     </html>
   );

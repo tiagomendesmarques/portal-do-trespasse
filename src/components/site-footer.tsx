@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CookieSettingsLink } from "./cookie-consent";
 import { LogoMark } from "./logo";
 
 const COLS = [
@@ -23,7 +24,10 @@ export function SiteFooter() {
             ))}
           </div>
         ))}
-        <p className="border-t border-white/10 pt-4 text-xs opacity-70 sm:col-span-2 lg:col-span-4">© Portal do Trespasse {new Date().getFullYear()}. Publicar anúncios é gratuito.</p>
+        <p className="flex flex-wrap gap-x-4 gap-y-1 border-t border-white/10 pt-4 text-xs sm:col-span-2 lg:col-span-4">
+          <span className="opacity-70">© Portal do Trespasse {new Date().getFullYear()}. Publicar anúncios é gratuito.</span>
+          {process.env.GTM_ID && <CookieSettingsLink className="cursor-pointer underline opacity-70 hover:opacity-100" />}
+        </p>
       </div>
     </footer>
   );

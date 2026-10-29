@@ -1,5 +1,7 @@
 # Migração do WordPress — guia do dia da mudança
 
+> Para fazer tudo com o Claude no Chrome: [PROMPT_CHROME_PRODUCAO.md](PROMPT_CHROME_PRODUCAO.md) (mesmos passos, com pausas para as passwords e para a decisão de mudar o DNS).
+
 Este guia passa o Portal do Trespasse do WordPress para o site novo sem perder anúncios, contas nem endereços.
 A importação foi ensaiada com o dump de 27/10/2026 numa base de dados vazia (ver "Ensaio" no fim).
 
@@ -15,6 +17,7 @@ A importação foi ensaiada com o dump de 27/10/2026 numa base de dados vazia (v
 | 58 mensagens do formulário de contacto | Back-office → Mensagens (sem o IP) |
 | 415 endereços públicos | Todos respondem (386 diretamente, 29 com redirect 301) |
 | Páginas (Elementor) | Reescritas à mão no site novo |
+| Google Tag Manager `GTM-T6S7GRGN` (estatísticas) | Mesmo contentor, só em produção e só depois de o visitante aceitar o aviso de cookies |
 | 436 comentários (todos spam), sessões, Wordfence, Yoast indexables | Não passam |
 
 Os favoritos não existem no dump (nenhum utilizador tinha favoritos guardados).
