@@ -1,19 +1,22 @@
 #!/usr/bin/env bash
-# Cria (ou atualiza) o Portal do Trespasse no Google Cloud: staging ou produção.
+# Cria (ou atualiza) o Portal do Trespasse no Google Cloud: dev (testes) ou produção.
 # Correr no Cloud Shell, dentro da pasta do repositório:
-#   ./deploy/gcp-setup.sh ID-DO-PROJETO staging
-#   ./deploy/gcp-setup.sh ID-DO-PROJETO production     (no dia da mudança, ver docs/MIGRACAO.md)
+#   ./deploy/gcp-setup.sh ID-DO-PROJETO dev            (dev.portaldotrespasse.pt, site de testes; ramo dev)
+#   ./deploy/gcp-setup.sh ID-DO-PROJETO production     (portaldotrespasse.pt; ramo main; ver docs/MIGRACAO.md)
 # Pode ser repetido: o que já existe é mantido; só cria o que falta e faz um deploy novo.
 # Pede as passwords no terminal (não ficam no histórico nem no Git) e guarda-as no Secret Manager.
 set -euo pipefail
 
-PROJECT="${1:?Uso: ./deploy/gcp-setup.sh ID-DO-PROJETO staging|production}"
-ENV="${2:?Indique o ambiente: staging ou production}"
+PROJECT="${1:?Uso: ./deploy/gcp-setup.sh ID-DO-PROJETO dev|production}"
+ENV="${2:?Indique o ambiente: dev ou production}"
+# SITE_ENV=staging = site de testes: pede password, não é indexado e só envia emails à equipa.
 case "$ENV" in
-  staging)    SUFFIX=staging; DOMAIN=staging.portaldotrespasse.pt ;;
-  production) SUFFIX=producao; DOMAIN=portaldotrespasse.pt ;;
-  *) echo "Ambiente desconhecido: $ENV (staging ou production)"; exit 1 ;;
+  dev)        SUFFIX=dev;      DOMAIN=dev.portaldotrespasse.pt; SITE_ENV=staging;    BRANCH=dev ;;
+  production) SUFFIX=producao; DOMAIN=portaldotrespasse.pt;     SITE_ENV=production; BRANCH=main ;;
+  *) echo "Ambiente desconhecido: $ENV (dev ou production)"; exit 1 ;;
 esac
+GITHUB_OWNER=tiagomendesmarques
+GITHUB_REPO=portal-do-trespasse
 REGION=europe-west1
 SQL_INSTANCE=pdt-sql                 # uma instância para os dois ambientes (bases de dados separadas)
 DB="portal_${SUFFIX}"
@@ -79,31 +82,31 @@ if ! secret_exists pdt-smtp-password; then
   read -rsp "Password do email ${SMTP_USER}: " SMTP_PASS; echo
   put_secret pdt-smtp-password "$SMTP_PASS"; unset SMTP_PASS
 fi
-if [ "$ENV" = staging ] && ! secret_exists "${SECRET_PREFIX}-basic-auth-password"; then
-  read -rsp "Password para entrar no staging (utilizador \"equipa\"): " BA_PASS; echo
+if [ "$ENV" = dev ] && ! secret_exists "${SECRET_PREFIX}-basic-auth-password"; then
+  read -rsp "Password para entrar no site de testes (utilizador \"equipa\"): " BA_PASS; echo
   put_secret "${SECRET_PREFIX}-basic-auth-password" "$BA_PASS"; unset BA_PASS
 fi
 secret_exists "${SECRET_PREFIX}-cron-secret" || put_secret "${SECRET_PREFIX}-cron-secret" "$(openssl rand -hex 24)"
 SECRETS="${SECRET_PREFIX}-database-url pdt-smtp-password ${SECRET_PREFIX}-cron-secret"
-[ "$ENV" = staging ] && SECRETS="$SECRETS ${SECRET_PREFIX}-basic-auth-password"
+[ "$ENV" = dev ] && SECRETS="$SECRETS ${SECRET_PREFIX}-basic-auth-password"
 for s in $SECRETS; do grant_secret "$s"; done
 ONLY_TO=$(gcloud run services describe "$SERVICE" --region="$REGION" --format=json 2>/dev/null |
   python3 -c 'import json,sys; e=json.load(sys.stdin)["spec"]["template"]["spec"]["containers"][0].get("env",[]); print(next((x["value"] for x in e if x["name"]=="EMAIL_ONLY_TO"),""))' 2>/dev/null || true)
-if [ "$ENV" = staging ] && [ -z "$ONLY_TO" ]; then
-  read -rp "No staging, que emails podem receber mensagens a sério? (vírgulas) [${SMTP_USER}]: " ONLY_TO
+if [ "$ENV" = dev ] && [ -z "$ONLY_TO" ]; then
+  read -rp "No site de testes, que emails podem receber mensagens a sério? (vírgulas) [${SMTP_USER}]: " ONLY_TO
   ONLY_TO=${ONLY_TO:-$SMTP_USER}
 fi
 
 step "7/9 Construir a imagem (Cloud Build, ~5 minutos)"
 TAG="${ENV}-$(git rev-parse --short HEAD 2>/dev/null || date +%s)"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/${REPO}/app:${TAG}"
-gcloud builds submit --config=deploy/build.yaml --substitutions="_IMAGE=${IMAGE}" --timeout=1800 .
+gcloud builds submit --config=deploy/build.yaml --substitutions="_IMAGE=${IMAGE},_DEPLOYMENT_ID=${TAG}" --timeout=1800 .
 
 step "8/9 Deploy no Cloud Run"
-ENV_VARS="SITE_ENV=${ENV}|SITE_URL=https://${DOMAIN}|MEDIA_DRIVER=gcs|GCS_BUCKET=${BUCKET}|EMAIL_DRIVER=smtp|SMTP_HOST=${SMTP_HOST}|SMTP_PORT=465|SMTP_USER=${SMTP_USER}"
+ENV_VARS="SITE_ENV=${SITE_ENV}|SITE_URL=https://${DOMAIN}|MEDIA_DRIVER=gcs|GCS_BUCKET=${BUCKET}|EMAIL_DRIVER=smtp|SMTP_HOST=${SMTP_HOST}|SMTP_PORT=465|SMTP_USER=${SMTP_USER}"
 SECRET_VARS="DATABASE_URL=${SECRET_PREFIX}-database-url:latest,SMTP_PASSWORD=pdt-smtp-password:latest,CRON_SECRET=${SECRET_PREFIX}-cron-secret:latest"
-if [ "$ENV" = staging ]; then
-  # Staging: protegido por password e só envia emails a sério para EMAIL_ONLY_TO.
+if [ "$ENV" = dev ]; then
+  # Site de testes: protegido por password e só envia emails a sério para EMAIL_ONLY_TO.
   ENV_VARS="${ENV_VARS}|BASIC_AUTH_USER=equipa|EMAIL_ONLY_TO=${ONLY_TO}"
   SECRET_VARS="${SECRET_VARS},BASIC_AUTH_PASSWORD=${SECRET_PREFIX}-basic-auth-password:latest"
 fi
@@ -127,6 +130,21 @@ else
 fi
 unset CRON
 
+step "Deploy automático (push no ramo ${BRANCH} → este ambiente)"
+TRIGGER="pdt-${SUFFIX}-deploy"
+if gcloud builds triggers describe "$TRIGGER" >/dev/null 2>&1; then
+  echo "O gatilho ${TRIGGER} já existe."
+elif gcloud builds triggers create github --name="$TRIGGER" --repo-owner="$GITHUB_OWNER" --repo-name="$GITHUB_REPO" \
+     --branch-pattern="^${BRANCH}\$" --build-config=cloudbuild.yaml --substitutions="_SERVICE=${SERVICE}" \
+     --service-account="projects/${PROJECT}/serviceAccounts/${BUILD_SA}" >/dev/null 2>&1; then
+  echo "Gatilho criado: cada push no ramo ${BRANCH} faz deploy de ${SERVICE}."
+else
+  echo "Ainda não foi possível criar o gatilho: falta ligar o GitHub ao Cloud Build (uma só vez):"
+  echo "  https://console.cloud.google.com/cloud-build/triggers;region=global/connect?project=${PROJECT}"
+  echo "  → GitHub (Cloud Build GitHub App) → autorizar → escolher ${GITHUB_OWNER}/${GITHUB_REPO} → Ligar (sem criar gatilho)."
+  echo "Depois voltar a correr este script."
+fi
+
 step "Domínio"
 DOMAINS="$DOMAIN"
 [ "$ENV" = production ] && DOMAINS="$DOMAIN www.${DOMAIN}"   # o site redireciona www → sem www
@@ -146,10 +164,10 @@ done
 cat <<EOF
 
 Pronto (${ENV}).
-  Endereço provisório: ${URL}$([ "$ENV" = staging ] && echo '   (utilizador "equipa" + a password do staging)')
+  Endereço provisório: ${URL}$([ "$ENV" = dev ] && echo '   (utilizador "equipa" + a password do site de testes)')
   Endereço final:      https://${DOMAIN}   (quando o DNS e o certificado estiverem prontos, ~15 min a 1 h)
   Fotografias:         gs://${BUCKET}
-  Emails:              SMTP ${SMTP_HOST}$([ "$ENV" = staging ] && echo "; só recebem a sério: ${ONLY_TO}")
+  Emails:              SMTP ${SMTP_HOST}$([ "$ENV" = dev ] && echo "; só recebem a sério: ${ONLY_TO}")
 
 Próximo passo: importar os dados do WordPress com ./deploy/gcp-import.sh ${PROJECT} ${ENV} dump.sql pasta-uploads
 EOF

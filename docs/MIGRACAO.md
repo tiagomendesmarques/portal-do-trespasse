@@ -21,9 +21,9 @@ Os favoritos não existem no dump (nenhum utilizador tinha favoritos guardados).
 
 ## Antes do dia
 
-1. O staging (`staging.portaldotrespasse.pt`) está a funcionar com uma importação recente e foi revisto.
+1. O site de testes (`dev.portaldotrespasse.pt`, ramo `dev`) está a funcionar com uma importação recente e foi revisto, e o ramo `main` tem a mesma versão.
 2. A produção já existe, ainda sem dados e sem tráfego: no Cloud Shell, `./deploy/gcp-setup.sh ID-DO-PROJETO production`
-   (cria a base `portal_producao`, o bucket, o serviço e a tarefa diária; mostra os registos DNS, que **só** se mudam no dia).
+   (cria a base `portal_producao`, o bucket, o serviço, a tarefa diária e o deploy automático do ramo `main`; mostra os registos DNS, que **só** se mudam no dia).
 3. Escolher um dia e uma hora calmos (ex.: domingo de manhã). A mudança leva cerca de 1 hora.
 4. Na Cloudflare, baixar o TTL do registo de `portaldotrespasse.pt` para 5 minutos, pelo menos um dia antes.
 5. Decidir se vai enviar o email "O Portal do Trespasse tem um site novo" (passo 8). É opcional.

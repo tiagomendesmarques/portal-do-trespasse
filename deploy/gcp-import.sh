@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Importa o WordPress para a base de dados e o bucket de um ambiente, e confirma o resultado.
 # Correr no Cloud Shell, dentro da pasta do repositório, depois do deploy/gcp-setup.sh:
-#   ./deploy/gcp-import.sh ID-DO-PROJETO staging /caminho/dump.sql /caminho/pasta-com-uploads
+#   ./deploy/gcp-import.sh ID-DO-PROJETO dev /caminho/dump.sql /caminho/pasta-com-uploads
 # O dump e os uploads têm dados pessoais: ficam FORA da pasta do repositório e apagam-se no fim.
 set -euo pipefail
 
-PROJECT="${1:?Uso: ./deploy/gcp-import.sh ID-DO-PROJETO staging|production dump.sql pasta-uploads}"
-ENV="${2:?Indique o ambiente: staging ou production}"
+PROJECT="${1:?Uso: ./deploy/gcp-import.sh ID-DO-PROJETO dev|production dump.sql pasta-uploads}"
+ENV="${2:?Indique o ambiente: dev ou production}"
 SQL=$(realpath "${3:?Falta o caminho do dump .sql}")
 UPLOADS=$(realpath "${4:?Falta a pasta que contém uploads/}")
 [ -f "$SQL" ] || { echo "Não encontro o dump: $SQL"; exit 1; }

@@ -2,14 +2,14 @@
 # Corre um comando ligado à base de dados e ao bucket de um ambiente (via Cloud SQL Auth Proxy).
 # Correr no Cloud Shell, dentro da pasta do repositório. Exemplos:
 #   ./deploy/gcp-run.sh ID-DO-PROJETO production npx tsx scripts/send-migration-notice.ts
-#   ./deploy/gcp-run.sh ID-DO-PROJETO staging npx tsx scripts/sql.ts "select count(*) from listings"
+#   ./deploy/gcp-run.sh ID-DO-PROJETO dev npx tsx scripts/sql.ts "select count(*) from listings"
 set -euo pipefail
 
-PROJECT="${1:?Uso: ./deploy/gcp-run.sh ID-DO-PROJETO staging|production comando...}"
-ENV="${2:?Indique o ambiente: staging ou production}"
+PROJECT="${1:?Uso: ./deploy/gcp-run.sh ID-DO-PROJETO dev|production comando...}"
+ENV="${2:?Indique o ambiente: dev ou production}"
 shift 2
 [ $# -gt 0 ] || { echo "Falta o comando a correr."; exit 1; }
-case "$ENV" in staging) SUFFIX=staging ;; production) SUFFIX=producao ;; *) echo "Ambiente desconhecido: $ENV"; exit 1 ;; esac
+case "$ENV" in dev) SUFFIX=dev ;; production) SUFFIX=producao ;; *) echo "Ambiente desconhecido: $ENV"; exit 1 ;; esac
 REGION=europe-west1
 SQL_INSTANCE=pdt-sql
 PORT=5433
@@ -32,8 +32,9 @@ for _ in $(seq 1 30); do (echo >/dev/tcp/127.0.0.1/$PORT) 2>/dev/null && break; 
 
 # O segredo aponta para o socket do Cloud Run; aqui liga-se pelo proxy local.
 DATABASE_URL=$(gcloud secrets versions access latest --secret="pdt-${SUFFIX}-database-url" | sed -E "s#@/([^?]+)\?host=.*#@127.0.0.1:${PORT}/\1#")
-export DATABASE_URL MEDIA_DRIVER=gcs GCS_BUCKET="${PROJECT}-pdt-${SUFFIX}-media" SITE_ENV="$ENV"
-export SITE_URL="https://$([ "$ENV" = staging ] && echo staging.)portaldotrespasse.pt"
+export DATABASE_URL MEDIA_DRIVER=gcs GCS_BUCKET="${PROJECT}-pdt-${SUFFIX}-media"
+export SITE_ENV="$([ "$ENV" = dev ] && echo staging || echo production)"
+export SITE_URL="https://$([ "$ENV" = dev ] && echo dev.)portaldotrespasse.pt"
 # Emails: por omissão só regista. Para enviar a sério (ex.: aviso de mudança), EMAIL_DRIVER=smtp antes do comando.
 export EMAIL_DRIVER="${EMAIL_DRIVER:-log}" SMTP_HOST=smtp-pt.securemail.pro SMTP_PORT=465 SMTP_USER=geral@portaldotrespasse.pt
 if [ "$EMAIL_DRIVER" = smtp ]; then

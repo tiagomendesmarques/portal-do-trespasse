@@ -5,6 +5,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci --no-audit --no-fund
 COPY . .
+# Identifica a versão (commit). O Next.js usa-a para que, depois de um deploy, quem tem uma página
+# antiga aberta carregue a nova em vez de pedir ficheiros JS/CSS que já não existem.
+ARG NEXT_DEPLOYMENT_ID=""
+ENV NEXT_DEPLOYMENT_ID=$NEXT_DEPLOYMENT_ID
 RUN npx next build && node scripts/build-scripts.mjs
 
 FROM node:22-slim

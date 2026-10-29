@@ -78,7 +78,7 @@ check("email de boas-vindas registado", Boolean(await lastEmailLink("welcome")))
 // 5. Logout e login com email
 await logout();
 await login(`${u}@exemplo.pt`, "segura-123");
-check("login com email", await page.locator(`text=Olá, ${u}`).isVisible());
+check("login com email", await page.getByRole("heading", { name: `Olá, ${u}` }).isVisible());
 await logout();
 
 // 6. Password errada
@@ -87,14 +87,14 @@ check("password errada mostra erro genérico", await page.locator("text=incorret
 
 // 7. Utilizadores migrados do WordPress
 await login("utilizador.wp", "palavra-passe");
-check("login com hash $wp$ do WordPress", await page.locator("text=Olá, Utilizador WP").isVisible());
+check("login com hash $wp$ do WordPress", await page.getByRole("heading", { name: "Olá, Utilizador WP" }).isVisible());
 await logout();
 await login("phpass@exemplo.pt", "palavra-passe");
-check("login com hash phpass antigo", await page.locator("text=Olá, Antigo").isVisible());
+check("login com hash phpass antigo", await page.getByRole("heading", { name: "Olá, Antigo" }).isVisible());
 await logout();
 // Depois do rehash, a mesma password continua a funcionar.
 await login("utilizador.wp", "palavra-passe");
-check("login depois do rehash", await page.locator("text=Olá, Utilizador WP").isVisible());
+check("login depois do rehash", await page.getByRole("heading", { name: "Olá, Utilizador WP" }).isVisible());
 await logout();
 
 // 8. Recuperar password
@@ -115,7 +115,7 @@ await logout();
 await login(u, "segura-123");
 check("password antiga deixa de funcionar", await page.locator("text=incorretos").isVisible());
 await login(u, "nova-segura-456");
-check("nova password funciona", await page.locator(`text=Olá, ${u}`).isVisible());
+check("nova password funciona", await page.getByRole("heading", { name: `Olá, ${u}` }).isVisible());
 await page.goto(reset);
 check("ligação de recuperação não pode ser reutilizada", await page.locator("text=expirou ou já foi usada").isVisible());
 

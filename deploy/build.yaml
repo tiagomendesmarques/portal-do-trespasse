@@ -1,9 +1,10 @@
-# Só constrói e publica a imagem (o deploy é feito pelo deploy/gcp-staging.sh, com a configuração completa).
+# Só constrói e publica a imagem (o deploy é feito pelo deploy/gcp-setup.sh, com a configuração completa).
 substitutions:
   _IMAGE: ""
+  _DEPLOYMENT_ID: ""
 steps:
   - name: gcr.io/cloud-builders/docker
-    args: ["build", "-t", "${_IMAGE}", "."]
+    args: ["build", "--build-arg=NEXT_DEPLOYMENT_ID=${_DEPLOYMENT_ID}", "-t", "${_IMAGE}", "."]
 images:
   - ${_IMAGE}
 options:

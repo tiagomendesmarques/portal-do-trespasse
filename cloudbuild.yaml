@@ -1,25 +1,32 @@
-# Cada push no ramo configurado no gatilho do Cloud Build constrói a imagem e faz deploy do staging.
-# Só troca a imagem: variáveis, segredos e base de dados ficam como o deploy/gcp-setup.sh os deixou.
-# (Para a produção, um segundo gatilho com _SERVICE=portal-do-trespasse-producao.)
+# Deploy automático: cada push num ramo ligado a um gatilho do Cloud Build constrói a imagem e
+# atualiza o serviço desse ambiente. Os gatilhos são criados pelo deploy/gcp-setup.sh:
+#   ramo dev  → portal-do-trespasse-dev      (dev.portaldotrespasse.pt)
+#   ramo main → portal-do-trespasse-producao (portaldotrespasse.pt)
+# Só troca a imagem: variáveis, segredos e base de dados ficam como o gcp-setup.sh os deixou.
+# As migrações da base de dados correm sozinhas quando o contentor novo arranca.
 substitutions:
   _REGION: europe-west1
-  _SERVICE: portal-do-trespasse-staging
+  _SERVICE: portal-do-trespasse-dev
   _REPO: portal-do-trespasse
 steps:
   - name: gcr.io/cloud-builders/docker
-    args: ["build", "-t", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app:$COMMIT_SHA", "."]
+    args:
+      - build
+      - --build-arg=NEXT_DEPLOYMENT_ID=$SHORT_SHA
+      - -t=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app:${_SERVICE}-$SHORT_SHA
+      - .
   - name: gcr.io/cloud-builders/docker
-    args: ["push", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app:$COMMIT_SHA"]
+    args: ["push", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app:${_SERVICE}-$SHORT_SHA"]
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: gcloud
     args:
       - run
       - deploy
       - ${_SERVICE}
-      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app:$COMMIT_SHA
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app:${_SERVICE}-$SHORT_SHA
       - --region=${_REGION}
-      - --allow-unauthenticated
 images:
-  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app:$COMMIT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/app:${_SERVICE}-$SHORT_SHA
 options:
   logging: CLOUD_LOGGING_ONLY
+timeout: 1800s

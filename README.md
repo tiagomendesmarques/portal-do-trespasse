@@ -52,44 +52,64 @@ node e2e/url-coverage.mjs http://localhost:3000    # os 415 URLs do WordPress
 
 Em desenvolvimento, as imagens ficam em `MEDIA_DIR` (por omissão `./.data/media`).
 
-## Google Cloud (staging e produção)
+## Google Cloud (dev e produção)
 
-Arquitetura: Cloud Run (o site, um contentor) + Cloud SQL Postgres 16 (uma instância `pdt-sql`, uma base por
-ambiente) + Cloud Storage (fotografias, bucket privado servido em `/media/`) + Secret Manager (passwords) +
-Cloud Scheduler (tarefas diárias) + Cloud Build (imagens). Emails por SMTP (`smtp-pt.securemail.pro`, conta
-`geral@portaldotrespasse.pt`). Região `europe-west1`. DNS na Cloudflare.
+| Ramo no GitHub | Ambiente | Endereço | Serviço Cloud Run | Base de dados | Emails |
+|---|---|---|---|---|---|
+| `dev` | site de testes (pede password, não indexado) | dev.portaldotrespasse.pt | `portal-do-trespasse-dev` | `portal_dev` | só para `EMAIL_ONLY_TO` |
+| `main` | produção | portaldotrespasse.pt | `portal-do-trespasse-producao` | `portal_producao` | todos |
 
-Tudo corre no **Cloud Shell** (o terminal do Google Cloud no browser, já autenticado), dentro deste repositório:
+**Deploy automático:** cada push num destes ramos constrói a imagem no Cloud Build e atualiza o serviço
+correspondente (`cloudbuild.yaml`, cerca de 5 minutos). As migrações da base de dados correm sozinhas quando o
+contentor novo arranca. Fluxo normal: trabalho → `dev` → testar em dev.portaldotrespasse.pt → `main`.
+
+**Cache:** não é preciso fazer nada a cada deploy.
+- As páginas são geradas a cada pedido e nunca ficam em cache (`Cache-Control: no-store`).
+- O CSS e o JS têm um código no nome do ficheiro que muda quando o conteúdo muda, por isso podem ficar em cache um ano.
+- Cada build leva a versão do commit (`NEXT_DEPLOYMENT_ID`). Quem tinha uma página antiga aberta carrega a nova na navegação seguinte.
+- As fotografias têm nomes únicos e nunca são substituídas.
+
+**Arquitetura:**
+- Cloud Run (o site, um contentor).
+- Cloud SQL Postgres 16: uma instância `pdt-sql`, com uma base por ambiente.
+- Cloud Storage: fotografias num bucket privado, servido em `/media/`.
+- Secret Manager (passwords), Cloud Scheduler (tarefas diárias) e Cloud Build (imagens e deploys).
+- Emails por SMTP (`smtp-pt.securemail.pro`, conta `geral@portaldotrespasse.pt`).
+- Região `europe-west1`. DNS na Cloudflare.
+
+### Criar um ambiente (uma vez)
+
+No **Cloud Shell** (o terminal do Google Cloud no browser, já autenticado):
 
 ```bash
 git clone https://github.com/tiagomendesmarques/portal-do-trespasse.git && cd portal-do-trespasse
-git checkout claude/fase-6-deploy        # (ou main, depois de juntar os ramos)
-
-./deploy/gcp-setup.sh ID-DO-PROJETO staging
+git checkout dev
+./deploy/gcp-setup.sh ID-DO-PROJETO dev
 ```
 
-O script pode ser repetido (só cria o que falta e faz um deploy novo). Na primeira vez:
-- pede a password do email `geral@` e a password do staging (escritas no terminal, guardadas no Secret Manager);
-- pergunta que emails podem receber mensagens a sério no staging (os outros ficam só registados no back-office);
-- cria a base de dados (~10 min), o bucket, a conta de serviço, os segredos, a imagem, o serviço e a tarefa diária;
-- no fim mostra o registo DNS a criar na Cloudflare (nuvem cinzenta). Se o domínio ainda não estiver verificado,
-  pede `gcloud domains verify portaldotrespasse.pt` uma vez.
+O script pode ser repetido: só cria o que falta e faz um deploy novo. Na primeira vez:
+- Pede a password do email `geral@` e a password do site de testes. São escritas no terminal e guardadas no Secret Manager.
+- Pergunta que emails podem receber mensagens a sério no `dev`. Os outros ficam só registados no back-office.
+- Cria:
+  - a base de dados (cerca de 10 min);
+  - o bucket e a conta de serviço;
+  - os segredos;
+  - a imagem e o serviço;
+  - a tarefa diária;
+  - o gatilho de deploy automático.
+- **Primeira vez apenas:**
+  - Se o GitHub ainda não estiver ligado ao Cloud Build, o script mostra o link para o ligar.
+  - Se o domínio ainda não estiver verificado, pede `gcloud domains verify portaldotrespasse.pt`.
+  - Depois disso, voltar a correr o script.
+- No fim mostra o registo DNS a criar na Cloudflare (nuvem cinzenta).
 
-Depois, importar o WordPress (dump e uploads carregados no Cloud Shell, **fora** do repositório):
+Importar o WordPress (dump e uploads carregados no Cloud Shell, **fora** do repositório):
 
 ```bash
-./deploy/gcp-import.sh ID-DO-PROJETO staging ~/wp/dump.sql ~/wp/uploads-pasta
+./deploy/gcp-import.sh ID-DO-PROJETO dev ~/wp/dump.sql ~/wp/uploads-pasta
 rm -rf ~/wp                                   # dados pessoais: apagar no fim
 ```
 
 Entrar no back-office com a conta de administrador do WordPress (mesma password).
 
-| Ambiente | Serviço | Base de dados | Bucket | Emails |
-|---|---|---|---|---|
-| staging | `portal-do-trespasse-staging` | `portal_staging` | `PROJETO-pdt-staging-media` | só para `EMAIL_ONLY_TO` |
-| production | `portal-do-trespasse-producao` | `portal_producao` | `PROJETO-pdt-producao-media` | todos |
-
-Deploys seguintes: Cloud Build → Gatilhos → ligar o repositório GitHub, ficheiro `cloudbuild.yaml`
-(troca só a imagem; a configuração mantém-se). Ou voltar a correr `./deploy/gcp-setup.sh`.
-
-A produção faz-se no dia da mudança com os mesmos dois scripts e `production` (ver [docs/MIGRACAO.md](docs/MIGRACAO.md)).
+A produção faz-se no dia da mudança com os mesmos scripts e `production` (ver [docs/MIGRACAO.md](docs/MIGRACAO.md)).
