@@ -64,23 +64,40 @@ Diz-me quando a Parte A estiver feita e espera que eu diga para começar a Parte
 - Vai a Elementor → Ferramentas → separador **Modo de manutenção**, escolhe "Modo de manutenção" e uma página de manutenção, e guarda.
 - Confirma numa janela anónima que o site mostra a página de manutenção.
 
-### B2. Exportar (eu faço os downloads; tu guias)
-- **Base de dados:** no painel do alojamento → phpMyAdmin → base de dados do WordPress → **Exportar** → Rápido → SQL → Executar. Fica um ficheiro `.sql` (ou `.sql.zip`) no meu computador.
-- **Uploads:** um ZIP completo de `wp-content/uploads`, como da outra vez. Se forem várias partes `…-partNN-of13.zip`, servem todas.
-- Depois pede-me para os carregar no Cloud Shell (menu ⋮ → **Upload**).
+### B2. Os ficheiros do WordPress
+Já tenho os dois ficheiros exportados no meu computador:
+- `portdb_nexsbt63.sql` — a base de dados;
+- `mftp_zip_…_19_11_59.zip` — os uploads, num só ZIP.
+
+1. Pergunta-me se exportei a base de dados **depois** de ligar o modo de manutenção.
+   - Se não, pede-me para exportar o SQL outra vez, para não se perder nada publicado entretanto. É rápido: phpMyAdmin → base de dados → Exportar → Rápido → SQL.
+   - O ZIP dos uploads só precisa de ser refeito se tiverem entrado fotografias novas desde então.
+2. Pede-me para carregar os dois ficheiros no Cloud Shell: menu ⋮ → **Upload** → escolher os dois.
+3. Confirma que chegaram inteiros:
+
+   ```bash
+   ls -la ~/*.sql ~/*.zip
+   ```
+
+**Se o Upload do Cloud Shell falhar** (o ZIP é grande), usa um bucket temporário e privado:
+1. No Cloud Shell, corre `gcloud storage buckets create gs://ID-DO-PROJETO-pdt-migracao --location=europe-west1 --uniform-bucket-level-access --public-access-prevention`.
+2. Em https://console.cloud.google.com/storage/browser, abre esse bucket e pede-me para arrastar os dois ficheiros para lá.
+3. Copia-os para o Cloud Shell: `gcloud storage cp 'gs://ID-DO-PROJETO-pdt-migracao/*' ~/`.
+4. Apaga o bucket logo a seguir: `gcloud storage rm -r gs://ID-DO-PROJETO-pdt-migracao`.
 
 ### B3. Importar para a produção
 ```bash
-mkdir -p ~/wp && mv ~/*.zip ~/*.sql ~/wp/ 2>/dev/null
-cd ~/wp && ls -la
-unzip -o '*.sql.zip' -x '__MACOSX/*' 2>/dev/null; ls *.sql
-for f in *.zip; do case "$f" in *.sql.zip) ;; *) unzip -oq "$f" -d uploads-pasta ;; esac; done
-ls uploads-pasta/uploads | head
+mkdir -p ~/wp && mv ~/portdb_*.sql ~/*mftp_zip*.zip ~/wp/
+cd ~/wp && unzip -oq *mftp_zip*.zip -x '__MACOSX/*' -d uploads-pasta
+# a pasta que contém "uploads" (pode vir dentro de wp-content/ ou de outra pasta)
+UP=$(dirname "$(find ~/wp/uploads-pasta -maxdepth 4 -type d -name uploads | awk "{ print length, \$0 }" | sort -n | head -1 | cut -d" " -f2-)")
+echo "$UP"; ls "$UP/uploads" | head
 cd ~/portal-do-trespasse
-./deploy/gcp-import.sh ID-DO-PROJETO production ~/wp/NOME-DO-DUMP.sql ~/wp/uploads-pasta
+./deploy/gcp-import.sh ID-DO-PROJETO production ~/wp/portdb_nexsbt63.sql "$UP"
 ```
 
-Tem de terminar com **"20/20 verificações passaram — migração confirmada"**. Copia-me também as linhas "AVISO".
+- Em `ls "$UP/uploads"` têm de aparecer as pastas dos anos (`2018`, `2019`, …). Se não aparecerem, mostra-me o resultado de `find ~/wp/uploads-pasta -maxdepth 3 -type d | head -20` e para.
+- A importação tem de terminar com **"20/20 verificações passaram — migração confirmada"**. Copia-me também as linhas "AVISO".
 
 ### B4. Testar antes de mudar o domínio
 Abre o endereço provisório (`….run.app`) e confirma:
