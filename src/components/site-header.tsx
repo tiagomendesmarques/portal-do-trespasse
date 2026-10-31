@@ -16,7 +16,7 @@ export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-surface">
       {/* relative: o menu móvel abre por baixo do cabeçalho */}
-      <div className="wrap relative flex h-16 items-center gap-5">
+      <div className="wrap relative flex h-16 items-center gap-3 md:gap-5">
         <Logo />
         <nav className="hidden gap-1 md:flex" aria-label="Principal">
           {NAV.map((n) => (
@@ -25,14 +25,14 @@ export async function SiteHeader() {
             </Link>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           {user ? (
-            <Link href={ROUTES.account} className="btn-ghost">
+            <Link href={ROUTES.account} className="btn-ghost px-2.5 sm:px-4">
               <span className="grid size-6 place-items-center rounded-full bg-wash text-xs font-extrabold text-accent">{user.displayName.charAt(0).toUpperCase()}</span>
               <span className="hidden sm:inline">Minha conta</span>
             </Link>
           ) : (
-            <Link href={ROUTES.account} className="btn-ghost">Entrar</Link>
+            <Link href={ROUTES.account} className="btn-ghost px-3 sm:px-4">Entrar</Link>
           )}
           <Link href={ROUTES.post} className="btn-primary hidden sm:inline-flex">Publicar anúncio</Link>
           <MobileMenu items={NAV} loggedIn={Boolean(user)} />

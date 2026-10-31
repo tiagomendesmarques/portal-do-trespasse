@@ -22,6 +22,9 @@
   --font-sans: var(--font-schibsted), "Helvetica Neue", Arial, system-ui, sans-serif;
 }
 
+/* Nada pode fazer a página deslizar para o lado no telemóvel (ex.: um texto longo num anúncio).
+   "clip" em vez de "hidden" para não estragar o cabeçalho fixo (position: sticky). */
+html, body { overflow-x: clip; }
 body {
   background: var(--color-bg);
   color: var(--color-ink);
