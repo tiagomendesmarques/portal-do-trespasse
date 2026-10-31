@@ -81,29 +81,23 @@ Cria o registo que o script mostrou. Normalmente é este:
 Se o script mostrar outros valores, usa os do script. O certificado HTTPS demora entre 15 minutos e 1 hora a ficar pronto.
 
 ### 7. Importar os dados do WordPress
-1. Pede-me para carregar os ficheiros no Cloud Shell (menu ⋮ → **Upload**) para uma pasta `~/wp`:
-   - o dump da base de dados: `portdb_….sql.zip`, ou um `.sql` mais recente;
-   - os 13 ZIPs dos uploads: `…-part01-of13.zip` a `…-part13-of13.zip`.
-2. Quando eu disser que acabou, descompacta. Cada parte é um ZIP completo e vão todas para a mesma pasta:
+1. Pede-me para carregar no Cloud Shell (menu ⋮ → **Upload**) os dois ficheiros:
+   - `portdb_nexsbt63.sql` (a base de dados);
+   - o ZIP dos uploads (`mftp_zip_….zip`).
+2. Descompacta e importa:
 
    ```bash
-   mkdir -p ~/wp && mv ~/*.zip ~/*.sql ~/wp/ 2>/dev/null   # o Upload põe os ficheiros na pasta pessoal
-   cd ~/wp && ls -la
-   unzip -o *.sql.zip -x '__MACOSX/*' 2>/dev/null; ls *.sql
-   for f in *part*-of13.zip; do unzip -oq "$f" -d uploads-pasta; done
-   ls uploads-pasta/uploads | head
-   ```
-
-   Em `uploads-pasta/uploads` têm de aparecer as pastas dos anos (`2018`, `2019`, …). Se faltar alguma das 13 partes, avisa-me.
-3. Importa:
-
-   ```bash
+   mkdir -p ~/wp && mv ~/portdb_*.sql ~/*mftp_zip*.zip ~/wp/
+   cd ~/wp && unzip -oq *mftp_zip*.zip -x '__MACOSX/*' -d uploads-pasta
+   UP=$(dirname "$(find ~/wp/uploads-pasta -maxdepth 4 -type d -name uploads | awk "{ print length, \$0 }" | sort -n | head -1 | cut -d" " -f2-)")
+   echo "$UP"; ls "$UP/uploads" | head
    cd ~/portal-do-trespasse
-   ./deploy/gcp-import.sh ID-DO-PROJETO dev ~/wp/NOME-DO-DUMP.sql ~/wp/uploads-pasta
+   ./deploy/gcp-import.sh ID-DO-PROJETO dev ~/wp/portdb_nexsbt63.sql "$UP"
    ```
 
-   Tem de terminar com **"20/20 verificações passaram — migração confirmada"**.
-4. Apaga os ficheiros, que têm dados pessoais: `rm -rf ~/wp`.
+   - Em `ls "$UP/uploads"` têm de aparecer as pastas dos anos (`2018`, `2019`, …).
+   - A importação tem de terminar com **"20/20 verificações passaram — migração confirmada"**.
+3. Apaga os ficheiros, que têm dados pessoais: `rm -rf ~/wp`.
 
 ### 8. Confirmar que funciona
 - Abre o endereço provisório que o script mostrou (`https://portal-do-trespasse-dev-….run.app`). Quando o certificado estiver pronto, abre https://dev.portaldotrespasse.pt.
