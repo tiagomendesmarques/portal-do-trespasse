@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getDb, schema } from "@/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { notifyAdmins, sendTemplate } from "@/lib/email/send";
+import { formatDate } from "@/lib/format";
 import { rateLimit } from "@/lib/rate-limit";
 import { getSettings } from "@/lib/settings";
 import { absoluteUrl } from "@/lib/site";
@@ -70,13 +71,18 @@ export async function saveListingAction(_: PostState, fd: FormData): Promise<Pos
   const staffEdit = Boolean(editId && previous && previous.userId !== user.id && isStaff);
   const settings = await getSettings(["listings.moderation", "listings.moderateEdits", "listings.durationDays"]);
   const wasPublic = previous && ["published", "sold"].includes(previous.status);
+  // Aprovação automática = "listings.moderation" desligado. Vale para anúncios novos e para os que
+  // nunca chegaram a ser publicados (ex.: rejeitados e corrigidos). Os expirados renovam-se à parte.
+  const autoApprove = !settings["listings.moderation"];
+  const neverPublished = !previous?.publishedAt;
   const status = staffEdit
     ? previous!.status
-    : editId
-      ? wasPublic && !settings["listings.moderateEdits"] ? previous!.status : "pending"
-      : settings["listings.moderation"] ? "pending" : "published";
+    : wasPublic
+      ? settings["listings.moderateEdits"] ? "pending" : previous!.status
+      : autoApprove && neverPublished ? "published" : "pending";
+  const firstPublish = status === "published" && neverPublished;
 
-  const listing = await saveListing(ownerId, result.data, { editId, status, durationDays: settings["listings.durationDays"], firstPublish: !editId });
+  const listing = await saveListing(ownerId, result.data, { editId, status, durationDays: settings["listings.durationDays"], firstPublish });
   await db.insert(schema.auditLog).values({ actorId: user.id, action: staffEdit ? "listing.staff_edit" : editId ? "listing.edit" : "listing.create", entity: "listing", entityId: String(listing.id), data: { status } });
 
   if (staffEdit) redirect(`/admin/anuncios/${listing.id}/?editado=1`);
@@ -89,5 +95,17 @@ export async function saveListingAction(_: PostState, fd: FormData): Promise<Pos
       admin_listing_url: absoluteUrl(`/admin/anuncios/${listing.id}/`),
     });
   }
-  redirect(`/my-account/listings/?${editId ? "editado" : "enviado"}=${listing.id}`);
+  if (firstPublish) {
+    // Aprovação automática: "recebemos" e logo a seguir "publicado"; a equipa é avisada para rever.
+    await sendTemplate("listing_received_auto", user.email, {
+      name: user.displayName, listing_title: listing.title, account_listings_url: absoluteUrl("/my-account/listings/"),
+    });
+    await sendTemplate("listing_published", user.email, {
+      name: user.displayName, listing_title: listing.title, listing_url: absoluteUrl(`/listing/${listing.slug}/`), expires_at: formatDate(listing.expiresAt),
+    });
+    await notifyAdmins("admin_listing_auto_published", {
+      user_name: user.displayName, listing_title: listing.title, admin_listing_url: absoluteUrl(`/admin/anuncios/${listing.id}/`),
+    });
+  }
+  redirect(`/my-account/listings/?${editId ? "editado" : "enviado"}=${listing.id}${status === "pending" ? "" : "&publicado=1"}`);
 }

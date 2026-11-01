@@ -14,7 +14,7 @@ export const metadata = { title: "Definições" };
 
 const GROUPS: { title: string; items: [SettingKey, string, string?][] }[] = [
   { title: "Publicação e moderação", items: [
-    ["listings.moderation", "Anúncios novos ficam à espera de aprovação"],
+    ["listings.moderation", "Anúncios novos ficam à espera de aprovação (desligado = aprovação automática)"],
     ["listings.moderateEdits", "Anúncios editados voltam a precisar de aprovação"],
     ["listings.freeAdsPerUser", "Anúncios ativos por pessoa (plano grátis)"],
   ] },

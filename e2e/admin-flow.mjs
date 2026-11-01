@@ -66,20 +66,23 @@ const r404 = await adv.goto(`${BASE}/admin/`);
 check("anunciante não vê o back-office (404)", r404.status() === 404);
 
 // 2. Anúncio novo fica pendente
-await adv.goto(`${BASE}/post-an-ad/`);
-await adv.getByRole("button", { name: /Trespasse/ }).first().click();
-await adv.getByRole("button", { name: "Restauração" }).click();
-await adv.fill('input[name="title"]', title);
-await adv.fill('input[name="price"]', "30.000");
-await adv.fill('textarea[name="description"]', "Pastelaria com fabrico próprio, clientela fixa e boa localização no centro.");
-await adv.check('input[name="f:negocio-sazonal"][value="nao"]');
-await adv.check('input[name="f:tipo-de-negocio"][value="b2c"]');
-await adv.check('input[name="f:depende-fornecedores"][value="sim"]');
-await adv.check('input[name="f:presenca"][value="espaco-fisico"]');
-await adv.locator("select").filter({ hasText: "Selecione o distrito" }).selectOption({ label: "Porto" });
-await adv.selectOption('select[name="locationId"]', { label: "Matosinhos" });
-await adv.fill('input[name="phone"]', "913 222 111");
-await submit(adv, adv.getByRole("button", { name: "Publicar anúncio" }));
+async function postAd(adTitle) {
+  await adv.goto(`${BASE}/post-an-ad/`);
+  await adv.getByRole("button", { name: /Trespasse/ }).first().click();
+  await adv.getByRole("button", { name: "Restauração" }).click();
+  await adv.fill('input[name="title"]', adTitle);
+  await adv.fill('input[name="price"]', "30.000");
+  await adv.fill('textarea[name="description"]', "Pastelaria com fabrico próprio, clientela fixa e boa localização no centro.");
+  await adv.check('input[name="f:negocio-sazonal"][value="nao"]');
+  await adv.check('input[name="f:tipo-de-negocio"][value="b2c"]');
+  await adv.check('input[name="f:depende-fornecedores"][value="sim"]');
+  await adv.check('input[name="f:presenca"][value="espaco-fisico"]');
+  await adv.locator("select").filter({ hasText: "Selecione o distrito" }).selectOption({ label: "Porto" });
+  await adv.selectOption('select[name="locationId"]', { label: "Matosinhos" });
+  await adv.fill('input[name="phone"]', "913 222 111");
+  await submit(adv, adv.getByRole("button", { name: "Publicar anúncio" }));
+}
+await postAd(title);
 check("anúncio enviado para aprovação", adv.url().includes("enviado="), adv.url());
 const editHref = await adv.locator('a[href^="/post-an-ad/editar/"]').first().getAttribute("href");
 const id = editHref.match(/\d+/)[0];
@@ -222,7 +225,26 @@ await adm.selectOption('select[name="status"]', "draft");
 await submit(adm, adm.getByRole("button", { name: "Guardar", exact: true }));
 check("rascunho deixa de ser público", (await status(`/guia-e2e-${n}/`)) === 404);
 
-// 15. Auditoria e limpeza (apagar o utilizador apaga os anúncios)
+// 15. Aprovação automática
+await adm.goto(`${BASE}/admin/anuncios/`);
+await submit(adm, adm.getByRole("switch", { name: "Aprovação automática" }));
+check("ligar a aprovação automática", (await adm.getByRole("switch", { name: "Aprovação automática" }).getAttribute("aria-checked")) === "true");
+const autoTitle = `Padaria auto ${n}`;
+await postAd(autoTitle);
+check("anúncio fica logo publicado", adv.url().includes("publicado=1") && (await adv.locator("text=Anúncio publicado!").isVisible()), adv.url());
+check("anúncio automático é público", (await status(`/listing/padaria-auto-${n}/`)) === 200);
+check("email 'recebemos' (sem falar em revisão)", (await (await mailbox("listing_received_auto", autoTitle)).count()) === 1);
+check("email 'publicado' logo a seguir", (await (await mailbox("listing_published", autoTitle)).count()) === 1);
+check("equipa avisada para rever", (await (await mailbox("admin_listing_auto_published", autoTitle)).count()) >= 1);
+check("sem email 'por aprovar' nem 'em revisão'", (await (await mailbox("listing_submitted", autoTitle)).count()) === 0 && (await (await mailbox("admin_listing_pending", autoTitle)).count()) === 0);
+await adm.goto(`${BASE}/admin/anuncios/`);
+await submit(adm, adm.getByRole("switch", { name: "Aprovação automática" }));
+check("desligar a aprovação automática", (await adm.getByRole("switch", { name: "Aprovação automática" }).getAttribute("aria-checked")) === "false");
+const manualTitle = `Padaria manual ${n}`;
+await postAd(manualTitle);
+check("desligada: volta a ficar à espera", !adv.url().includes("publicado=1") && (await status(`/listing/padaria-manual-${n}/`)) === 404);
+
+// 16. Auditoria e limpeza (apagar o utilizador apaga os anúncios)
 await adm.goto(`${BASE}/admin/auditoria/`);
 check("auditoria regista as ações", (await adm.locator("text=Bloqueou").count()) >= 1 && (await adm.locator("text=Alterou definições").count()) >= 1);
 await adm.goto(userUrl);

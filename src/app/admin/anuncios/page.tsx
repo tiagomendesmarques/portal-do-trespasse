@@ -2,7 +2,10 @@ import Link from "next/link";
 import { Alert } from "@/components/auth/form-bits";
 import { Price } from "@/components/listings/bits";
 import { AdminHeader, Pager, StatusChip, Table } from "@/components/admin/ui";
+import { isAdmin, requireStaff } from "@/lib/admin/guard";
+import { autoApproveAction } from "@/lib/admin/listing-actions";
 import { adminListings, statusCounts } from "@/lib/admin/queries";
+import { getSetting } from "@/lib/settings";
 import { getTaxonomies } from "@/lib/listings/queries";
 import { formatDate, relativeTime } from "@/lib/format";
 import { mediaUrl } from "@/lib/media";
@@ -16,8 +19,8 @@ export default async function AdminListings({ searchParams }: { searchParams: SP
   const sp = await searchParams;
   const status = sp.estado ?? "pending";
   const page = Math.max(1, Number(sp.pagina) || 1);
-  const [counts, tax, r] = await Promise.all([
-    statusCounts(), getTaxonomies(),
+  const [me, moderation, counts, tax, r] = await Promise.all([
+    requireStaff(), getSetting("listings.moderation"), statusCounts(), getTaxonomies(),
     adminListings({ status: status || undefined, q: sp.q?.trim() || undefined, category: Number(sp.categoria) || undefined, userId: Number(sp.utilizador) || undefined, expiringDays: Number(sp.expira) || undefined, page }),
   ]);
   const qs = (o: Record<string, string | number | undefined>) => {
@@ -31,6 +34,7 @@ export default async function AdminListings({ searchParams }: { searchParams: SP
   return (
     <>
       <AdminHeader title="Anúncios" />
+      <AutoApprove on={!moderation} canChange={isAdmin(me)} />
       {sp.aprovado && <div className="mb-4"><Alert tone="ok">Anúncio aprovado e publicado. O anunciante foi avisado por email.</Alert></div>}
       {sp.apagado && <div className="mb-4"><Alert tone="ok">Anúncio apagado.</Alert></div>}
       <div className="mb-4 flex flex-wrap gap-1.5" role="tablist">
@@ -73,5 +77,24 @@ export default async function AdminListings({ searchParams }: { searchParams: SP
       </Table>
       <Pager page={page} pages={r.pages} href={(p) => qs({ pagina: p })} />
     </>
+  );
+}
+
+/** Interruptor da aprovação automática (só administradores podem mudar). */
+function AutoApprove({ on, canChange }: { on: boolean; canChange: boolean }) {
+  return (
+    <form action={autoApproveAction} className={`mb-4 flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm ${on ? "border-accent bg-wash" : "border-line bg-surface"}`}>
+      <input type="hidden" name="on" value={on ? "0" : "1"} />
+      <button type="submit" role="switch" aria-checked={on} aria-label="Aprovação automática" disabled={!canChange}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60 ${on ? "bg-accent" : "bg-line"}`}>
+        <span className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${on ? "left-[22px]" : "left-0.5"}`} />
+      </button>
+      <p className="min-w-0 flex-1">
+        <b>Aprovação automática {on ? "ligada" : "desligada"}.</b>{" "}
+        {on
+          ? "Os anúncios novos e as alterações ficam logo visíveis. O anunciante recebe \"recebemos\" e \"publicado\"; a equipa recebe um aviso para rever."
+          : "Os anúncios novos e as alterações esperam aqui pela sua aprovação."}
+      </p>
+    </form>
   );
 }

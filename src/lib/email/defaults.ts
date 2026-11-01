@@ -75,6 +75,19 @@ Recebemos o seu anúncio "{listing_title}". Vamos revê-lo e avisamos assim que 
 [Ver os meus anúncios]({account_listings_url})`,
   },
   {
+    key: "listing_received_auto",
+    description: "Anúncio recebido (com aprovação automática ligada)",
+    subject: "Recebemos o seu anúncio \"{listing_title}\"",
+    heading: "Anúncio recebido",
+    body: `Olá {name},
+
+Recebemos o seu anúncio "{listing_title}". Obrigado por publicar no Portal do Trespasse!
+
+Vai receber já a seguir a confirmação de que está publicado.
+
+[Ver os meus anúncios]({account_listings_url})`,
+  },
+  {
     key: "listing_edited",
     description: "Anúncio editado: alterações em revisão",
     subject: "Alterações ao anúncio \"{listing_title}\" em revisão",
@@ -209,6 +222,17 @@ Se não se lembrar da password, pode pedir uma nova em {reset_request_url}
     subject: "[Admin] Anúncio por aprovar: {listing_title}",
     heading: "Anúncio por aprovar",
     body: `{user_name} {action} o anúncio "{listing_title}".
+
+[Rever anúncio]({admin_listing_url})`,
+  },
+  {
+    key: "admin_listing_auto_published",
+    description: "Administração: anúncio publicado automaticamente",
+    subject: "[Admin] Publicado automaticamente: {listing_title}",
+    heading: "Anúncio publicado automaticamente",
+    body: `{user_name} publicou o anúncio "{listing_title}". Com a aprovação automática ligada, já está visível para todos.
+
+Reveja-o e, se for preciso, despublique-o.
 
 [Rever anúncio]({admin_listing_url})`,
   },

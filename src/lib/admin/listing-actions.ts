@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
-import { requireStaff } from "@/lib/admin/guard";
+import { requireAdmin, requireStaff } from "@/lib/admin/guard";
 import type { FormState } from "@/lib/auth/actions";
 import { sendTemplate } from "@/lib/email/send";
 import { formatDate } from "@/lib/format";
@@ -63,6 +63,18 @@ export async function rejectListingAction(_: FormState, fd: FormData): Promise<F
   });
   refresh(l.id, l.slug);
   return { ok: true, message: "Anúncio rejeitado. O anunciante foi avisado por email com o motivo." };
+}
+
+/** Interruptor "Aprovação automática" (Anúncios no back-office). Liga/desliga a moderação de anúncios novos e de edições. */
+export async function autoApproveAction(fd: FormData) {
+  const admin = await requireAdmin();
+  const on = fd.get("on") === "1";
+  const db = getDb();
+  for (const key of ["listings.moderation", "listings.moderateEdits"]) {
+    await db.insert(schema.settings).values({ key, value: !on }).onConflictDoUpdate({ target: schema.settings.key, set: { value: !on, updatedAt: new Date() } });
+  }
+  await db.insert(schema.auditLog).values({ actorId: admin.id, action: "settings.update", entity: "settings", entityId: "aprovacao-automatica", data: { autoApprove: on } });
+  revalidatePath("/admin/", "layout");
 }
 
 /** Outras ações da equipa sobre um anúncio. */

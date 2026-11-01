@@ -17,14 +17,18 @@ const STATUS: Record<string, [string, "ok" | "warn" | "neutral" | "accent"]> = {
   expired: ["Expirado", "neutral"], sold: ["Vendido", "accent"], draft: ["Rascunho", "neutral"],
 };
 
-export default async function MyListingsPage({ searchParams }: { searchParams: Promise<{ enviado?: string; editado?: string }> }) {
+export default async function MyListingsPage({ searchParams }: { searchParams: Promise<{ enviado?: string; editado?: string; publicado?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/my-account/?next=/my-account/listings/");
   const [sp, listings, counts] = await Promise.all([searchParams, myListings(user.id), accountCounts(user.id)]);
   return (
     <AccountShell user={user} active="anuncios" title="Os meus anúncios" counts={counts}>
-      {sp.enviado && <Alert tone="ok">Anúncio enviado. Vamos revê-lo e avisamos por email quando estiver publicado (normalmente em menos de 48 horas).</Alert>}
-      {sp.editado && <Alert tone="ok">Alterações guardadas. Ficam visíveis depois de revistas pela equipa.</Alert>}
+      {sp.enviado && (sp.publicado
+        ? <Alert tone="ok">Anúncio publicado! Já está visível para todos. Enviámos-lhe a confirmação por email.</Alert>
+        : <Alert tone="ok">Anúncio enviado. Vamos revê-lo e avisamos por email quando estiver publicado (normalmente em menos de 48 horas).</Alert>)}
+      {sp.editado && (sp.publicado
+        ? <Alert tone="ok">Alterações guardadas e já visíveis.</Alert>
+        : <Alert tone="ok">Alterações guardadas. Ficam visíveis depois de revistas pela equipa.</Alert>)}
       <div className="flex justify-end"><Link href="/post-an-ad/" className="btn-primary">Publicar anúncio</Link></div>
       {listings.length === 0 && (
         <div className="panel py-10 text-center">
