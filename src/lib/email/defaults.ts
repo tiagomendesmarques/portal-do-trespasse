@@ -237,6 +237,19 @@ Reveja-o e, se for preciso, despublique-o.
 [Rever anúncio]({admin_listing_url})`,
   },
   {
+    key: "admin_post_api",
+    description: "Administração: artigo recebido pela API",
+    subject: "[Admin] Artigo {action}: {post_title}",
+    heading: "Artigo recebido pela API",
+    body: `O artigo "{post_title}" chegou pela API de artigos e foi {action}. Pontuação SEO: {seo_score}/100.
+
+Reveja-o e, se for preciso, edite ou apague no back-office.
+
+[Abrir no back-office]({admin_post_url})
+
+[Ver no site]({article_url})`,
+  },
+  {
     key: "admin_listing_expired",
     description: "Administração: anúncio expirado",
     subject: "[Admin] Anúncio expirado: {listing_title}",

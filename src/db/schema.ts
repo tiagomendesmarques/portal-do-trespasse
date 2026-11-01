@@ -327,6 +327,9 @@ export const emailLog = pgTable(
 
 export const contentStatus = pgEnum("content_status", ["draft", "published"]);
 
+export type PostFaq = { question: string; answer: string };
+export type PostSource = { title: string; url: string };
+
 export const posts = pgTable(
   "posts",
   {
@@ -337,10 +340,23 @@ export const posts = pgTable(
     excerpt: text("excerpt"),
     contentHtml: text("content_html").notNull(),
     featuredImageKey: text("featured_image_key"),
+    // Imagens do Unsplash ficam nos servidores deles (regras da API do Unsplash); as outras guardam-se em featuredImageKey.
+    featuredImageUrl: text("featured_image_url"),
+    featuredImageAlt: text("featured_image_alt"),
+    featuredImageCaption: text("featured_image_caption"),
+    featuredImageCredit: text("featured_image_credit"),
+    featuredImageCreditUrl: text("featured_image_credit_url"),
     tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
     status: contentStatus("status").notNull().default("draft"),
     seoTitle: text("seo_title"),
     seoDescription: text("seo_description"),
+    focusKeyword: text("focus_keyword"),
+    secondaryKeywords: text("secondary_keywords").array().notNull().default(sql`'{}'::text[]`),
+    faq: jsonb("faq").$type<PostFaq[]>().notNull().default([]),
+    sources: jsonb("sources").$type<PostSource[]>().notNull().default([]),
+    // "api" quando veio da API de artigos (/api/v1/artigos/).
+    createdVia: text("created_via"),
+    apiIdempotencyKey: text("api_idempotency_key").unique(),
     authorId: integer("author_id").references(() => users.id, { onDelete: "set null" }),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     ...timestamps,

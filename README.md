@@ -123,6 +123,11 @@ Exportar um dump novo (phpMyAdmin) e correr o mesmo `gcp-import.sh`. Pode ser re
 
 A produção faz-se no dia da mudança com os mesmos scripts e `production` (ver [docs/MIGRACAO.md](docs/MIGRACAO.md)).
 
+**API de artigos** (`/api/v1/artigos/`, para artigos automáticos):
+- Documentação: [docs/API_ARTIGOS.md](docs/API_ARTIGOS.md).
+- Ligar: `./deploy/gcp-blog-api.sh ID-DO-PROJETO`, com o passo a passo em [docs/PROMPT_CHROME_BLOG_API.md](docs/PROMPT_CHROME_BLOG_API.md).
+- Testes: `node e2e/api-artigos.mjs`.
+
 **Login com o Google:**
 1. Criar o cliente OAuth na consola (redirect URIs `https://portaldotrespasse.pt/api/auth/google/callback/` e
    `https://dev.portaldotrespasse.pt/api/auth/google/callback/`).

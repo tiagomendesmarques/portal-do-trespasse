@@ -93,6 +93,9 @@ SECRETS="${SECRET_PREFIX}-database-url pdt-smtp-password ${SECRET_PREFIX}-cron-s
 # Login com o Google (criado pelo deploy/gcp-google-login.sh): manter nos deploys seguintes.
 GOOGLE_LOGIN=""
 gcloud secrets describe pdt-google-client-secret >/dev/null 2>&1 && GOOGLE_LOGIN=1 && SECRETS="$SECRETS pdt-google-client-id pdt-google-client-secret"
+# API de artigos (criada pelo deploy/gcp-blog-api.sh): manter nos deploys seguintes.
+BLOG_API=""
+gcloud secrets describe pdt-blog-api-token >/dev/null 2>&1 && BLOG_API=1 && SECRETS="$SECRETS pdt-blog-api-token"
 for s in $SECRETS; do grant_secret "$s"; done
 ONLY_TO=$(gcloud run services describe "$SERVICE" --region="$REGION" --format=json 2>/dev/null |
   python3 -c 'import json,sys; e=json.load(sys.stdin)["spec"]["template"]["spec"]["containers"][0].get("env",[]); print(next((x["value"] for x in e if x["name"]=="EMAIL_ONLY_TO"),""))' 2>/dev/null || true)
@@ -112,6 +115,7 @@ SECRET_VARS="DATABASE_URL=${SECRET_PREFIX}-database-url:latest,SMTP_PASSWORD=pdt
 # Estatísticas: o mesmo Google Tag Manager do WordPress, só em produção e só com consentimento.
 [ "$ENV" = production ] && ENV_VARS="${ENV_VARS}|GTM_ID=GTM-T6S7GRGN"
 [ -n "$GOOGLE_LOGIN" ] && SECRET_VARS="${SECRET_VARS},GOOGLE_CLIENT_ID=pdt-google-client-id:latest,GOOGLE_CLIENT_SECRET=pdt-google-client-secret:latest"
+[ -n "$BLOG_API" ] && SECRET_VARS="${SECRET_VARS},BLOG_API_TOKEN=pdt-blog-api-token:latest"
 if [ "$ENV" = dev ]; then
   # Site de testes: protegido por password e só envia emails a sério para EMAIL_ONLY_TO.
   ENV_VARS="${ENV_VARS}|BASIC_AUTH_USER=equipa|EMAIL_ONLY_TO=${ONLY_TO}"

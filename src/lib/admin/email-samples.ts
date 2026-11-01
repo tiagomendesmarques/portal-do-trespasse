@@ -30,5 +30,9 @@ export function sampleVars(name = "Ana Ribeiro") {
     admin_listing_url: absoluteUrl("/admin/anuncios/"),
     admin_user_url: absoluteUrl("/admin/utilizadores/"),
     admin_reports_url: absoluteUrl("/admin/denuncias/"),
+    post_title: "Como avaliar um café antes do trespasse",
+    seo_score: 92,
+    article_url: absoluteUrl("/blog/"),
+    admin_post_url: absoluteUrl("/admin/blog/"),
   };
 }

@@ -5,7 +5,8 @@ import { NextResponse, type NextRequest } from "next/server";
  * Ligado só quando BASIC_AUTH_USER e BASIC_AUTH_PASSWORD estão definidos.
  */
 // Saúde (Cloud Run) e tarefas agendadas (têm o seu próprio segredo) ficam fora da password.
-const PUBLIC_PATHS = ["/api/health", "/api/cron/"];
+// A API de artigos tem a sua própria chave (Authorization: Bearer …).
+const PUBLIC_PATHS = ["/api/health", "/api/cron/", "/api/v1/"];
 
 export function proxy(req: NextRequest) {
   // www.portaldotrespasse.pt → portaldotrespasse.pt (um só endereço para o Google).

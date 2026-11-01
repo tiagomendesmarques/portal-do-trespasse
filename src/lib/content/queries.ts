@@ -9,7 +9,7 @@ export async function listPosts(page: number) {
   const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(schema.posts).where(pub);
   const pages = Math.max(1, Math.ceil(total / POSTS_PER_PAGE));
   const posts = await db
-    .select({ id: schema.posts.id, slug: schema.posts.slug, title: schema.posts.title, excerpt: schema.posts.excerpt, featuredImageKey: schema.posts.featuredImageKey, publishedAt: schema.posts.publishedAt })
+    .select({ id: schema.posts.id, slug: schema.posts.slug, title: schema.posts.title, excerpt: schema.posts.excerpt, featuredImageKey: schema.posts.featuredImageKey, featuredImageUrl: schema.posts.featuredImageUrl, featuredImageAlt: schema.posts.featuredImageAlt, publishedAt: schema.posts.publishedAt })
     .from(schema.posts)
     .where(pub)
     .orderBy(desc(schema.posts.publishedAt), desc(schema.posts.id))

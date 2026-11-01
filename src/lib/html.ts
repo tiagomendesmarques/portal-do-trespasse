@@ -14,7 +14,7 @@ export function sanitizeContentHtml(html: string): string {
     allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img", "figure", "figcaption", "h1", "h2"]),
     allowedAttributes: {
       a: ["href", "title", "target", "rel"],
-      img: ["src", "alt", "width", "height", "loading"],
+      img: ["src", "srcset", "sizes", "alt", "width", "height", "loading"],
       "*": ["id"],
     },
     allowedSchemes: ["http", "https", "mailto", "tel"],

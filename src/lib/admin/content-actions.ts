@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
-import type { FieldOption } from "@/db/schema";
+import type { FieldOption, PostFaq, PostSource } from "@/db/schema";
 import { requireAdmin, requireStaff } from "@/lib/admin/guard";
 import type { FormState } from "@/lib/auth/actions";
 import { EMAIL_TEMPLATES } from "@/lib/email/defaults";
@@ -136,6 +136,24 @@ export async function savePostAction(_: FormState, fd: FormData): Promise<FormSt
   if (title.length < 5) errors.title = "Indique o título.";
   if (!slug) errors.slug = "Indique o endereço.";
   if (contentHtml.trim().length < 50) errors.contentHtml = "Escreva o artigo (pelo menos 50 caracteres).";
+
+  // Perguntas frequentes (JSON do editor) e fontes ("Título | https://…", uma por linha).
+  let faq: PostFaq[] = [];
+  try {
+    const raw = JSON.parse(s(fd, "faq") || "[]") as PostFaq[];
+    faq = raw.map((f) => ({ question: String(f.question ?? "").trim(), answer: String(f.answer ?? "").trim() }));
+    if (faq.some((f) => !f.question || !f.answer)) errors.faq = "Cada pergunta precisa de pergunta e resposta.";
+  } catch {
+    errors.faq = "Não foi possível ler as perguntas frequentes.";
+  }
+  const sources: PostSource[] = [];
+  for (const line of s(fd, "sources").split("\n").map((l) => l.trim()).filter(Boolean)) {
+    const [title, url] = line.includes("|") ? line.split("|").map((x) => x.trim()) : [line, line];
+    if (!/^https?:\/\/\S+$/.test(url ?? "")) { errors.sources = `Fonte sem endereço válido: "${line}". Use: Título | https://…`; break; }
+    sources.push({ title: title || url, url });
+  }
+  const creditUrl = s(fd, "featuredImageCreditUrl");
+  if (creditUrl && !/^https?:\/\/\S+$/.test(creditUrl)) errors.featuredImageCreditUrl = "Endereço inválido.";
   const pageClash = await db.query.pages.findFirst({ where: eq(schema.pages.slug, slug) });
   const postClash = await db.query.posts.findFirst({ where: and(eq(schema.posts.slug, slug), id ? sql`${schema.posts.id} <> ${id}` : undefined) });
   if (pageClash || postClash) errors.slug = "Este endereço já está em uso.";
@@ -143,11 +161,17 @@ export async function savePostAction(_: FormState, fd: FormData): Promise<FormSt
 
   const status = fd.get("status") === "published" ? "published" : "draft";
   const before = id ? await db.query.posts.findFirst({ where: eq(schema.posts.id, id) }) : null;
+  const featuredImageKey = s(fd, "featuredImageKey") || null;
+  const featuredImageUrl = fd.get("removeExternalImage") === "on" ? null : before?.featuredImageUrl ?? null;
+  if ((featuredImageKey || featuredImageUrl) && !s(fd, "featuredImageAlt")) return { errors: { featuredImageAlt: "Descreva a imagem (texto alternativo): ajuda quem não a vê e o Google." } };
   const values = {
     title, slug, contentHtml, excerpt: s(fd, "excerpt") || excerpt(contentHtml, 220),
     tags: s(fd, "tags").split(",").map((t) => t.trim()).filter(Boolean), status: status as "published" | "draft",
     seoTitle: s(fd, "seoTitle") || null, seoDescription: s(fd, "seoDescription") || null,
-    featuredImageKey: s(fd, "featuredImageKey") || null, updatedAt: new Date(),
+    featuredImageKey, featuredImageUrl, featuredImageAlt: s(fd, "featuredImageAlt") || null,
+    featuredImageCaption: s(fd, "featuredImageCaption") || null, featuredImageCredit: s(fd, "featuredImageCredit") || null, featuredImageCreditUrl: creditUrl || null,
+    focusKeyword: s(fd, "focusKeyword") || null, secondaryKeywords: s(fd, "secondaryKeywords").split(",").map((t) => t.trim()).filter(Boolean),
+    faq, sources, updatedAt: new Date(),
     publishedAt: status === "published" ? before?.publishedAt ?? new Date() : before?.publishedAt ?? null,
   };
   if (id) {
@@ -164,6 +188,22 @@ export async function savePostAction(_: FormState, fd: FormData): Promise<FormSt
   }
   revalidatePath("/", "layout");
   return { ok: true, message: status === "published" ? "Artigo publicado." : "Rascunho guardado." };
+}
+
+/** Apagar um artigo. Se estava publicado, o endereço passa a redirecionar para o blog (sem erro 404). */
+export async function deletePostAction(fd: FormData) {
+  const staff = await requireStaff();
+  if (fd.get("confirm") !== "on") return;
+  const db = getDb();
+  const post = await db.query.posts.findFirst({ where: eq(schema.posts.id, Number(fd.get("id"))) });
+  if (!post) return;
+  await db.delete(schema.posts).where(eq(schema.posts.id, post.id));
+  if (post.status === "published") {
+    await db.insert(schema.redirects).values({ fromPath: `/${post.slug}/`, toPath: "/blog/", note: `Artigo apagado: ${post.title}`.slice(0, 200) }).onConflictDoNothing();
+  }
+  await audit(staff.id, "post.delete", "post", post.id, { title: post.title, slug: post.slug });
+  revalidatePath("/", "layout");
+  redirect("/admin/blog/?apagado=1");
 }
 
 /* ---------- Emails ---------- */
