@@ -15,9 +15,9 @@ export default async function EditAccountPage() {
   return (
     <AccountShell user={user} active="conta" title="Editar conta" counts={counts}>
       <ProfileForm user={user} distritos={tax.distritos.map((d) => ({ id: d.id, name: d.name }))} />
-      <EmailForm email={user.email} />
-      <PasswordForm />
-      {user.role !== "admin" && <DeleteAccountForm listings={counts.anuncios} />}
+      <EmailForm email={user.email} hasPassword={Boolean(user.passwordHash)} />
+      <PasswordForm hasPassword={Boolean(user.passwordHash)} google={Boolean(user.googleSub)} />
+      {user.role !== "admin" && <DeleteAccountForm listings={counts.anuncios} hasPassword={Boolean(user.passwordHash)} />}
     </AccountShell>
   );
 }

@@ -112,7 +112,7 @@ export const AUDIT_LABEL: Record<string, string> = {
   "listing.approve": "Aprovou", "listing.reject": "Rejeitou", "listing.unpublish": "Despublicou", "listing.sold": "Marcou como vendido",
   "listing.available": "Voltou a disponível", "listing.republish": "Voltou a publicar", "listing.renew": "Renovou", "listing.extend": "Prolongou a validade",
   "listing.feature": "Destacou", "listing.unfeature": "Retirou o destaque", "listing.delete": "Apagou", "listing.expire": "Expirou (automático)",
-  "user.role": "Mudou o perfil", "user.block": "Bloqueou", "user.unblock": "Desbloqueou", "user.delete": "Apagou a conta", "user.verify": "Confirmou o email",
+  "user.role": "Mudou o perfil", "user.google_signup": "Criou conta com o Google", "user.google_login": "Entrou com o Google", "user.block": "Bloqueou", "user.unblock": "Desbloqueou", "user.delete": "Apagou a conta", "user.verify": "Confirmou o email",
   "report.resolve": "Resolveu a denúncia", "settings.update": "Alterou definições", "email.update": "Alterou o modelo de email",
   "page.update": "Editou a página", "post.update": "Editou o artigo", "post.create": "Criou o artigo", "redirect.create": "Criou redirect", "redirect.delete": "Apagou redirect",
   "category.update": "Editou a categoria", "field.update": "Editou o campo",

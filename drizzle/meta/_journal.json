@@ -29,6 +29,13 @@
       "when": 1793143565708,
       "tag": "0003_lembretes",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793536476323,
+      "tag": "0004_login-google",
+      "breakpoints": true
     }
   ]
 }

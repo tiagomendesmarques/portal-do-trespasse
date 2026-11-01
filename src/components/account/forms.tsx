@@ -47,7 +47,7 @@ export function ProfileForm({ user, distritos }: { user: Profile; distritos: { i
   );
 }
 
-export function EmailForm({ email }: { email: string }) {
+export function EmailForm({ email, hasPassword }: { email: string; hasPassword: boolean }) {
   const [s, action] = useActionState<FormState, FormData>(changeEmailAction, {});
   const e = s.errors ?? {};
   return (
@@ -55,33 +55,40 @@ export function EmailForm({ email }: { email: string }) {
       <h2 className="text-xl font-bold">Email</h2>
       {s.ok && <Alert tone="ok">{s.message}</Alert>}
       <p className="text-sm text-muted">Email atual: <b>{email}</b>. Avisamos o endereço antigo quando muda.</p>
-      <div className="grid gap-4 md:grid-cols-2">
-        <Input form="email" name="email" label="Novo email" type="email" error={e.email} autoComplete="email" />
-        <Input form="email" name="password" label="Password atual" type="password" error={e.password} autoComplete="current-password" />
-      </div>
-      <div><Submit>Alterar email</Submit></div>
+      {hasPassword ? (
+        <>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Input form="email" name="email" label="Novo email" type="email" error={e.email} autoComplete="email" />
+            <Input form="email" name="password" label="Password atual" type="password" error={e.password} autoComplete="current-password" />
+          </div>
+          <div><Submit>Alterar email</Submit></div>
+        </>
+      ) : (
+        <p className="text-sm">Para mudar o email, defina primeiro uma password (abaixo).</p>
+      )}
     </form>
   );
 }
 
-export function PasswordForm() {
+export function PasswordForm({ hasPassword, google }: { hasPassword: boolean; google: boolean }) {
   const [s, action] = useActionState<FormState, FormData>(changePasswordAction, {});
   const e = s.errors ?? {};
   return (
     <form action={action} className="panel flex flex-col gap-4" noValidate>
       <h2 className="text-xl font-bold">Password</h2>
       {s.ok && <Alert tone="ok">{s.message}</Alert>}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Input form="pw" name="currentPassword" label="Password atual" type="password" error={e.currentPassword} autoComplete="current-password" />
+      {google && <p className="text-sm text-muted">{hasPassword ? "Pode entrar com o Google ou com esta password." : "Entra com o Google. Se quiser, defina também uma password para entrar com email."}</p>}
+      <div className={`grid gap-4 ${hasPassword ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+        {hasPassword && <Input form="pw" name="currentPassword" label="Password atual" type="password" error={e.currentPassword} autoComplete="current-password" />}
         <Input form="pw" name="newPassword" label="Nova password" type="password" hint="Mínimo 8 caracteres." error={e.newPassword} autoComplete="new-password" />
         <Input form="pw" name="newPassword2" label="Confirmar nova password" type="password" error={e.newPassword2} autoComplete="new-password" />
       </div>
-      <div><Submit>Alterar password</Submit></div>
+      <div><Submit>{hasPassword ? "Alterar password" : "Definir password"}</Submit></div>
     </form>
   );
 }
 
-export function DeleteAccountForm({ listings }: { listings: number }) {
+export function DeleteAccountForm({ listings, hasPassword }: { listings: number; hasPassword: boolean }) {
   const [s, action] = useActionState<FormState, FormData>(deleteAccountAction, {});
   const e = s.errors ?? {};
   return (
@@ -92,7 +99,7 @@ export function DeleteAccountForm({ listings }: { listings: number }) {
         <p className="text-sm">Apaga a conta{listings ? `, os seus ${listings} anúncios` : ""} e os favoritos. Não pode ser desfeito.</p>
         <div className="grid gap-4 md:grid-cols-2">
           <Input form="apagar" name="confirmText" label='Escreva "APAGAR"' error={e.confirmText} />
-          <Input form="apagar" name="password" label="Password atual" type="password" error={e.password} autoComplete="current-password" />
+          {hasPassword && <Input form="apagar" name="password" label="Password atual" type="password" error={e.password} autoComplete="current-password" />}
         </div>
         <div><button className="btn bg-danger text-white">Apagar a minha conta</button></div>
       </form>

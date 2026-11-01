@@ -39,7 +39,7 @@ export default async function AdminUser({ params }: { params: Promise<{ id: stri
               <div><dt className="text-muted">WhatsApp</dt><dd>{u.whatsapp ?? "—"}</dd></div>
               <div><dt className="text-muted">Registo</dt><dd>{formatDate(u.createdAt)}</dd></div>
               <div><dt className="text-muted">Último login</dt><dd>{u.lastLoginAt ? relativeTime(u.lastLoginAt) : "nunca no site novo"}</dd></div>
-              <div><dt className="text-muted">Password</dt><dd>{u.passwordHash.startsWith("$wp") || u.passwordHash.startsWith("$P$") ? "Do WordPress (converte no 1.º login)" : "Do site novo"}</dd></div>
+              <div><dt className="text-muted">Password</dt><dd>{!u.passwordHash ? "Sem password (entra com o Google)" : u.passwordHash.startsWith("$wp") || u.passwordHash.startsWith("$P$") ? "Do WordPress (converte no 1.º login)" : "Do site novo"}{u.passwordHash && u.googleSub ? " · também entra com o Google" : ""}</dd></div>
             </dl>
           </section>
           <section>

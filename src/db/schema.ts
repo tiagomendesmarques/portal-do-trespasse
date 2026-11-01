@@ -49,6 +49,8 @@ export const users = pgTable(
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
     remindersOptOut: boolean("reminders_opt_out").notNull().default(false),
+    // Identificador da conta Google ("sub") de quem entra com o Google. Sem password = password_hash vazio.
+    googleSub: text("google_sub").unique(),
     ...timestamps,
   },
   (t) => [

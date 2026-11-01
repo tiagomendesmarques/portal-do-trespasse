@@ -3,6 +3,8 @@ import Link from "next/link";
 import { LoginForm } from "@/components/auth/login-form";
 import { RegisterForm } from "@/components/auth/register-form";
 import { Alert } from "@/components/auth/form-bits";
+import { GoogleButton } from "@/components/auth/google-button";
+import { googleEnabled } from "@/lib/auth/google";
 import { AccountShell } from "@/components/account/shell";
 import { accountCounts, myListings } from "@/lib/account/queries";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -10,7 +12,16 @@ import { ROUTES } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Minha conta", robots: { index: false } };
 
-type Props = { searchParams: Promise<{ next?: string; verified?: string; verify?: string; password?: string }> };
+type Props = { searchParams: Promise<{ next?: string; verified?: string; verify?: string; password?: string; google?: string; bemvindo?: string }> };
+
+const GOOGLE_ERRORS: Record<string, string> = {
+  cancelado: "O login com o Google foi cancelado.",
+  expirou: "O pedido ao Google expirou. Tente outra vez.",
+  bloqueado: "Esta conta está bloqueada. Contacte-nos se achar que é um erro.",
+  "outra-conta": "Já existe uma conta com este email ligada a outra conta Google. Entre com a password ou com essa conta Google.",
+  muitas: "Demasiadas tentativas. Espere alguns minutos.",
+  erro: "Não foi possível entrar com o Google. Tente outra vez ou entre com email e password.",
+};
 
 export default async function AccountPage({ searchParams }: Props) {
   const sp = await searchParams;
@@ -28,9 +39,20 @@ export default async function AccountPage({ searchParams }: Props) {
             <Alert tone="error">A ligação de confirmação expirou ou já foi usada. Entre para pedir uma nova.</Alert>
           </div>
         )}
+        {sp.google && GOOGLE_ERRORS[sp.google] && (
+          <div className="mx-auto mb-4 max-w-[920px]">
+            <Alert tone="error">{GOOGLE_ERRORS[sp.google]}</Alert>
+          </div>
+        )}
         {sp.next && (
           <div className="mx-auto mb-4 max-w-[920px]">
             <Alert>Desculpe, precisa de fazer login primeiro.</Alert>
+          </div>
+        )}
+        {googleEnabled() && (
+          <div className="mx-auto mb-5 flex max-w-[920px] flex-col items-center gap-3">
+            <GoogleButton next={sp.next} />
+            <p className="flex w-full max-w-sm items-center gap-3 text-sm text-muted before:h-px before:flex-1 before:bg-line after:h-px after:flex-1 after:bg-line">ou com email</p>
           </div>
         )}
         <div className="mx-auto grid max-w-[920px] gap-5 md:grid-cols-2">
@@ -49,6 +71,7 @@ export default async function AccountPage({ searchParams }: Props) {
   return (
     <AccountShell user={user} active="painel" title={`Olá, ${user.displayName}`} counts={counts}>
       {sp.verified && <Alert tone="ok">Email confirmado. Já pode publicar anúncios.</Alert>}
+      {sp.bemvindo && <Alert tone="ok">Conta criada com o Google. Bem-vindo! Já pode publicar anúncios.</Alert>}
       {sp.password && <Alert tone="ok">Password alterada.</Alert>}
       <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[["Publicados", by("published")], ["À espera de aprovação", by("pending")], ["Visualizações", views], ["Mensagens recebidas", counts.mensagens]].map(([label, n]) => (

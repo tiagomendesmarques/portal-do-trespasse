@@ -97,6 +97,8 @@ export async function changeEmailAction(_: FormState, fd: FormData): Promise<For
   const user = await requireUser();
   const email = emailSchema.safeParse(fd.get("email"));
   if (!email.success) return { errors: { email: email.error.issues[0].message } };
+  // Contas só com Google: mudar o email exige definir primeiro uma password.
+  if (!user.passwordHash) return { errors: { email: "Defina primeiro uma password (mais abaixo) para poder mudar o email." } };
   const wrong = await checkCurrentPassword(user.id, user.passwordHash, String(fd.get("password") ?? ""));
   if (wrong) return { errors: { password: wrong } };
   if (email.data === user.email.toLowerCase()) return { errors: { email: "É o email que já tem." } };
@@ -117,25 +119,30 @@ export async function changePasswordAction(_: FormState, fd: FormData): Promise<
   const next = passwordSchema.safeParse(fd.get("newPassword"));
   if (!next.success) return { errors: { newPassword: next.error.issues[0].message } };
   if (next.data !== fd.get("newPassword2")) return { errors: { newPassword2: "As passwords não coincidem." } };
-  const wrong = await checkCurrentPassword(user.id, user.passwordHash, String(fd.get("currentPassword") ?? ""));
-  if (wrong) return { errors: { currentPassword: wrong } };
+  // Contas só com Google ainda não têm password: definem uma sem precisar da atual.
+  if (user.passwordHash) {
+    const wrong = await checkCurrentPassword(user.id, user.passwordHash, String(fd.get("currentPassword") ?? ""));
+    if (wrong) return { errors: { currentPassword: wrong } };
+  }
 
   await getDb().update(schema.users).set({ passwordHash: await hashPassword(next.data), updatedAt: new Date() }).where(eq(schema.users.id, user.id));
   // Termina as sessões noutros dispositivos e mantém esta.
   await destroyAllSessions(user.id);
   await createSession(user.id, false);
   await sendTemplate("security_notice", user.email, {
-    name: user.displayName, change: "A password foi alterada", date: new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" }),
+    name: user.displayName, change: user.passwordHash ? "A password foi alterada" : "Foi definida uma password", date: new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" }),
     reset_request_url: absoluteUrl(ROUTES.lostPassword),
   });
-  return { ok: true, message: "Password alterada. As sessões noutros dispositivos foram terminadas." };
+  return { ok: true, message: user.passwordHash ? "Password alterada. As sessões noutros dispositivos foram terminadas." : "Password definida. Já pode entrar também com email e password." };
 }
 
 export async function deleteAccountAction(_: FormState, fd: FormData): Promise<FormState> {
   const user = await requireUser();
   if (String(fd.get("confirmText") ?? "").trim().toUpperCase() !== "APAGAR") return { errors: { confirmText: "Escreva APAGAR para confirmar." } };
-  const wrong = await checkCurrentPassword(user.id, user.passwordHash, String(fd.get("password") ?? ""));
-  if (wrong) return { errors: { password: wrong } };
+  if (user.passwordHash) {
+    const wrong = await checkCurrentPassword(user.id, user.passwordHash, String(fd.get("password") ?? ""));
+    if (wrong) return { errors: { password: wrong } };
+  }
   if (user.role === "admin") return { message: "Contas de administrador não podem ser apagadas aqui." };
 
   await getDb().insert(schema.auditLog).values({ actorId: null, action: "user.delete", entity: "user", entityId: String(user.id), data: { wpId: user.wpId } });
