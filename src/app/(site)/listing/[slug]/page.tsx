@@ -64,9 +64,11 @@ export default async function ListingPage({ params }: Props) {
   const urgent = d.fields.some((f) => f.key === "venda-urgente");
   const hours = l.businessHours;
 
-  // Dados de "produto à venda" (Fichas de comerciantes do Google): o Google exige pelo menos uma imagem,
-  // por isso só os anúncios com fotografias os têm. Os outros continuam indexados normalmente.
-  const jsonLd = d.images.length > 0 && {
+  // Dados de "produto à venda" para o Google (Fichas de comerciantes e Fragmentos do produto): o Google exige
+  // pelo menos uma imagem e uma oferta com preço, por isso só os anúncios com fotografias e preço os têm.
+  // Os outros ("Contacte o anunciante" ou sem fotos) continuam indexados normalmente, só sem estes dados.
+  const hasOffer = l.price != null && l.price > 0 && l.priceType !== "on_call";
+  const jsonLd = d.images.length > 0 && hasOffer && {
     "@context": "https://schema.org",
     "@type": "Product",
     name: l.title,
@@ -74,16 +76,14 @@ export default async function ListingPage({ params }: Props) {
     category: d.category.name,
     image: d.images.map((i) => absoluteUrl(mediaUrl(i.storageKey, 1600))),
     url,
-    ...(l.price != null && l.priceType !== "on_call" && {
-      offers: {
-        "@type": "Offer",
-        price: l.price,
-        priceCurrency: "EUR",
-        availability: l.status === "sold" ? "https://schema.org/SoldOut" : "https://schema.org/InStock",
-        areaServed: place,
-        seller: { "@type": "Person", name: d.author.displayName },
-      },
-    }),
+    offers: {
+      "@type": "Offer",
+      price: l.price,
+      priceCurrency: "EUR",
+      availability: l.status === "sold" ? "https://schema.org/SoldOut" : "https://schema.org/InStock",
+      areaServed: place,
+      seller: { "@type": "Person", name: d.author.displayName },
+    },
   };
 
   return (
