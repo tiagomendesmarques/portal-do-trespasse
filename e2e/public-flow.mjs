@@ -112,6 +112,23 @@ const sm = await (await fetch(`${BASE}/sitemap.xml`)).text();
 check("sitemap.xml com anúncios e artigos", sm.includes(`/listing/${SLUG}/`) && (sm.match(/<loc>/g) ?? []).length > 350, `${(sm.match(/<loc>/g) ?? []).length} URLs`);
 check("sitemap_index.xml redireciona", (await fetch(`${BASE}/sitemap_index.xml`, { redirect: "manual" })).status === 308);
 
+// Dados para o Google ("Fichas de comerciantes"): um Product tem sempre imagem; anúncios sem fotos não têm Product.
+{
+  const html = await (await fetch(`${BASE}/all-ads/?pagina=1`)).text();
+  const paths = [...new Set([...html.matchAll(/href="(\/listing\/[^"]+)"/g)].map((m) => m[1]))];
+  let withProduct = 0;
+  const bad = [];
+  for (const path of paths) {
+    const body = await (await fetch(`${BASE}${path}`)).text();
+    for (const m of body.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
+      const ld = JSON.parse(m[1]);
+      if (ld["@type"] !== "Product") continue;
+      withProduct++;
+      if (!Array.isArray(ld.image) || ld.image.length === 0) bad.push(path);
+    }
+  }
+  check("dados de produto para o Google têm sempre imagem", bad.length === 0 && withProduct > 0, `${withProduct} com produto; sem imagem: ${bad.join(", ")}`);
+}
 check("sem erros de JavaScript", errors.length === 0, errors.join(" | "));
 await browser.close();
 for (const r of results) console.log(r.join("  "));

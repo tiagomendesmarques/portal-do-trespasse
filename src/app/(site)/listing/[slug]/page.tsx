@@ -64,7 +64,9 @@ export default async function ListingPage({ params }: Props) {
   const urgent = d.fields.some((f) => f.key === "venda-urgente");
   const hours = l.businessHours;
 
-  const jsonLd = {
+  // Dados de "produto à venda" (Fichas de comerciantes do Google): o Google exige pelo menos uma imagem,
+  // por isso só os anúncios com fotografias os têm. Os outros continuam indexados normalmente.
+  const jsonLd = d.images.length > 0 && {
     "@context": "https://schema.org",
     "@type": "Product",
     name: l.title,
@@ -86,7 +88,7 @@ export default async function ListingPage({ params }: Props) {
 
   return (
     <div className="wrap py-8">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />}
       {!isPublic(d) && (
         <div className="mb-4">
           <Alert>
