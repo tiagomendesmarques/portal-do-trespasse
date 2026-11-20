@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { filtersToQuery, SORTS, type ListingFilters, type Sort } from "@/lib/listings/filters";
+import { filtersToQuery, quickFiltersFor, SORTS, type ListingFilters, type Sort } from "@/lib/listings/filters";
 import { getCounts, getTaxonomies, searchListings } from "@/lib/listings/queries";
 import { FiltersForm } from "./filters-form";
 import { ListingCard, ListingRow } from "./listing-card";
@@ -48,6 +48,9 @@ export async function ListingArchive({ title, intro, crumbs, filters, basePath, 
             types={tax.types}
             categories={tax.categories.map((c) => ({ slug: c.slug, name: c.name, count: counts.category.get(c.id) }))}
             distritos={tax.distritos.map((d) => ({ slug: d.slug, name: d.name, count: counts.distrito.get(d.id), concelhos: d.concelhos.map((c) => ({ slug: c.slug, name: c.name })) }))}
+            quickFilters={quickFiltersFor(filters.category)
+              .filter((q) => !("field" in q) || tax.fields.some((x) => x.key === q.field))
+              .map((q) => ({ param: q.param, label: q.label }))}
             numberFields={tax.fields.filter((x) => x.searchable && x.type === "number").map((x) => ({ key: x.key, label: x.label, money: x.icon === "money" }))}
             choiceFields={tax.fields.filter((x) => x.searchable && x.type !== "number").map((x) => ({ key: x.key, label: x.label, options: x.options }))}
           />

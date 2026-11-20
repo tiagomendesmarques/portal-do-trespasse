@@ -4,7 +4,7 @@ import { getDb, schema } from "@/db";
 import { getSettings } from "@/lib/settings";
 import { formatNumber } from "@/lib/format";
 import { excerpt } from "@/lib/text";
-import { searchTerms, type ListingFilters } from "./filters";
+import { activeQuick, QUICK_FILTERS, searchTerms, type ListingFilters } from "./filters";
 
 const { listings: L, listingImages: I, categories: C, locations: Loc, users: U, listingTypes: LT } = schema;
 
@@ -131,6 +131,17 @@ export async function searchListings(f: ListingFilters, perPageOverride?: number
     if (ff.min != null) conds.push(sql`jsonb_typeof(v.value) = 'number' and (v.value)::numeric >= ${ff.min}`);
     if (ff.max != null) conds.push(sql`jsonb_typeof(v.value) = 'number' and (v.value)::numeric <= ${ff.max}`);
     where.push(sql`exists (select 1 from ${schema.listingFieldValues} v where v.listing_id = ${L.id} and ${and(...conds)})`);
+  }
+
+  for (const k of activeQuick(f)) {
+    const q = QUICK_FILTERS.find((x) => x.param === k)!;
+    if (k === "negociavel") where.push(eq(L.priceType, "negotiable"));
+    else if (k === "fotos") where.push(sql`exists (select 1 from ${schema.listingImages} i where i.listing_id = ${L.id})`);
+    else if ("field" in q) {
+      // Campo apagado ou desativado no back-office: o filtro é ignorado (e não aparece no formulário).
+      const def = tax.fields.find((x) => x.key === q.field);
+      if (def) where.push(sql`exists (select 1 from ${schema.listingFieldValues} v where v.listing_id = ${L.id} and v.field_id = ${def.id} and (v.value = '"sim"'::jsonb or v.value @> '["sim"]'::jsonb))`);
+    }
   }
 
   const order = {

@@ -47,6 +47,46 @@ await page.waitForURL(/orderby=price-asc/);
 const p = await prices();
 check("ordenar por preço crescente", p.length > 1 && p.every((v, i) => i === 0 || p[i - 1] <= v), p.slice(0, 4).join(", "));
 
+// 3b. Filtros rápidos ("Mostrar só") e "Mais filtros"
+const total = async () => Number((await page.locator("[aria-live=polite]").textContent()).match(/de (\d+)/)?.[1] ?? 0);
+await page.goto(`${BASE}/all-ads/`);
+const all = await total();
+check('"Mais filtros" começa fechado', !(await page.locator('input[name="renda-mensal_max"]').isVisible()) && (await page.locator("summary", { hasText: "Mais filtros" }).isVisible()));
+check("esplanada só aparece em restauração/hotelaria", (await page.locator('input[name="esplanada"]').count()) === 0);
+for (const [param, label, proof] of [["urgente", "Venda urgente", "Venda urgente"], ["negociavel", "Preço negociável", "Negociável"], ["fotos", "Com fotografias", null]]) {
+  await page.goto(`${BASE}/all-ads/`);
+  await page.getByLabel(label, { exact: true }).check();
+  await page.waitForURL(new RegExp(`${param}=1`));
+  const n = await total();
+  let ok = n > 0 && n < all;
+  if (ok && proof) {
+    await page.locator("article a[href^='/listing/']").first().click();
+    await page.waitForURL(/\/listing\//);
+    ok = (await page.locator(`text=${proof}`).count()) > 0;
+  }
+  if (ok && param === "fotos") ok = (await page.locator("article img").count()) === (await page.locator("article").count());
+  check(`filtro "${label}"`, ok, `${n} de ${all}`);
+}
+await page.goto(`${BASE}/all-ads/?urgente=1&negociavel=1&pagina=1`);
+const both = await total();
+await page.selectOption('select[name="categoria"]', "restauracao");
+await page.waitForURL(/categoria=restauracao/);
+check("filtros rápidos mantêm-se ao mudar de categoria", page.url().includes("urgente=1") && page.url().includes("negociavel=1") && (await total()) <= both);
+check("esplanada aparece em restauração", await page.getByLabel("Com esplanada").isVisible());
+await page.getByLabel("Com esplanada").check();
+await page.waitForURL(/esplanada=1/);
+await page.selectOption('select[name="categoria"]', "saude");
+await page.waitForURL(/categoria=saude/);
+{
+  // O pedido ainda leva esplanada=1, mas fora de restauração/hotelaria é ignorado: mesmo resultado que sem ele.
+  const n = await total();
+  const gone = (await page.locator('input[name="esplanada"]').count()) === 0;
+  await page.goto(`${BASE}/all-ads/?categoria=saude&urgente=1&negociavel=1`);
+  check("esplanada deixa de contar noutra categoria", gone && n === (await total()));
+}
+await page.goto(`${BASE}/all-ads/?renda-mensal_max=900`);
+check('"Mais filtros" abre quando está em uso', await page.locator('input[name="renda-mensal_max"]').isVisible());
+
 // 4. Página do anúncio sem sessão
 await page.goto(`${BASE}/listing/${SLUG}/`);
 check("anúncio mostra o preço", (await page.locator("text=95.000 € >> visible=true").count()) >= 1);

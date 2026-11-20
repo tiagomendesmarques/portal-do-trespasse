@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filtersToQuery, parseFilters, searchTerms } from "./filters";
+import { activeQuick, filtersToQuery, parseFilters, quickFiltersFor, searchTerms } from "./filters";
 
 const FIELDS = [{ key: "renda-mensal", type: "number" }, { key: "trabalhadores-com-contrato", type: "radio" }];
 
@@ -27,6 +27,23 @@ describe("filtersToQuery", () => {
   });
   it("permite mudar a página mantendo os filtros", () => {
     expect(filtersToQuery(parseFilters({ q: "loja" }), { page: 2 })).toBe("?q=loja&pagina=2");
+  });
+});
+
+describe("filtros rápidos", () => {
+  it("lê só os pedidos com =1 e mantém-nos nos links", () => {
+    const f = parseFilters({ urgente: "1", fotos: "1", negociavel: "0", equipamento: "sim" });
+    expect(f.quick).toEqual(["urgente", "fotos"]);
+    expect(filtersToQuery(f, { page: 2 })).toBe("?urgente=1&fotos=1&pagina=2");
+  });
+  it("esplanada só existe em restauração e hotelaria", () => {
+    expect(quickFiltersFor(null).map((q) => q.param)).not.toContain("esplanada");
+    expect(quickFiltersFor("restauracao").map((q) => q.param)).toContain("esplanada");
+    expect(quickFiltersFor("turismo-e-hotelaria").map((q) => q.param)).toContain("esplanada");
+    const fora = parseFilters({ esplanada: "1", categoria: "saude" });
+    expect(activeQuick(fora)).toEqual([]);
+    expect(filtersToQuery(fora)).toBe("?categoria=saude");
+    expect(activeQuick(parseFilters({ esplanada: "1", categoria: "restauracao" }))).toEqual(["esplanada"]);
   });
 });
 

@@ -12,6 +12,31 @@ export const SORTS = {
 } as const;
 export type Sort = keyof typeof SORTS;
 
+/**
+ * Filtros rápidos (caixas "só …"). Os de campo personalizado procuram o valor "sim" desse campo.
+ * `categories`: o filtro só existe nessas categorias (ex.: esplanada em restauração e hotelaria).
+ */
+export const QUICK_FILTERS = [
+  { param: "urgente", label: "Venda urgente", field: "venda-urgente" },
+  { param: "equipamento", label: "Equipamento incluído", field: "equipamento" },
+  { param: "esplanada", label: "Com esplanada", field: "esplanada", categories: ["restauracao", "turismo-e-hotelaria"] },
+  { param: "negociavel", label: "Preço negociável" },
+  { param: "fotos", label: "Com fotografias" },
+] as const satisfies readonly { param: string; label: string; field?: string; categories?: readonly string[] }[];
+export type QuickFilter = (typeof QUICK_FILTERS)[number];
+export type QuickKey = QuickFilter["param"];
+
+/** Os filtros rápidos que existem para esta categoria (null = todas as categorias). */
+export function quickFiltersFor(category: string | null): QuickFilter[] {
+  return QUICK_FILTERS.filter((q) => !("categories" in q) || (category != null && (q.categories as readonly string[]).includes(category)));
+}
+
+/** Os filtros rápidos pedidos que se aplicam (um "esplanada" fora de restauração/hotelaria é ignorado). */
+export function activeQuick(f: Pick<ListingFilters, "quick" | "category">): QuickKey[] {
+  const allowed = new Set(quickFiltersFor(f.category).map((q) => q.param));
+  return f.quick.filter((k) => allowed.has(k));
+}
+
 /** Campos personalizados que podem ser filtrados, por chave. Números por intervalo, escolhas por valor. */
 export type FieldFilter = { key: string; min?: number; max?: number; equals?: string };
 
@@ -25,6 +50,7 @@ export type ListingFilters = {
   priceMax: number | null;
   author: number | null;
   fields: FieldFilter[];
+  quick: QuickKey[];
   sort: Sort;
   page: number;
 };
@@ -64,6 +90,7 @@ export function parseFilters(sp: SearchParams, fieldDefs: { key: string; type: s
     priceMax: num(sp.preco_max),
     author: num(sp.anunciante),
     fields,
+    quick: QUICK_FILTERS.filter((q) => one(sp[q.param]) === "1").map((q) => q.param),
     sort: sort && sort in SORTS ? sort : "date-desc",
     page: Math.max(1, Math.min(1000, num(sp.pagina) ?? 1)),
   };
@@ -91,6 +118,7 @@ export function filtersToQuery(f: ListingFilters, override: Partial<ListingFilte
       if (ff.min != null) p.set(`${ff.key}_min`, String(ff.min));
       if (ff.max != null) p.set(`${ff.key}_max`, String(ff.max));
     }
+  if (!omit.has("quick")) for (const k of activeQuick(v)) p.set(k, "1");
   if (v.sort !== "date-desc") set("sort", "orderby", v.sort);
   if (v.page > 1) set("page", "pagina", v.page);
   const s = p.toString();

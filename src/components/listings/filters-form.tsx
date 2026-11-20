@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import type { ListingFilters } from "@/lib/listings/filters";
+import { activeQuick, type ListingFilters } from "@/lib/listings/filters";
 
 type Opt = { slug: string; name: string; count?: number };
 type Props = {
@@ -9,18 +9,21 @@ type Props = {
   types: { key: string; name: string }[];
   categories: Opt[];
   distritos: (Opt & { concelhos: Opt[] })[];
+  quickFilters: { param: string; label: string }[];
   numberFields: { key: string; label: string; money: boolean }[];
   choiceFields: { key: string; label: string; options: { value: string; label: string }[] }[];
   view: string;
 };
 
-export function FiltersForm({ filters: f, types, categories, distritos, numberFields, choiceFields, view }: Props) {
+export function FiltersForm({ filters: f, types, categories, distritos, quickFilters, numberFields, choiceFields, view }: Props) {
   const form = useRef<HTMLFormElement>(null);
   const [distrito, setDistrito] = useState(f.distrito ?? "");
   const concelhos = distritos.find((d) => d.slug === distrito)?.concelhos ?? [];
   const submit = () => form.current?.requestSubmit();
   const fieldVal = (key: string, k: "min" | "max" | "equals") => f.fields.find((x) => x.key === key)?.[k] ?? "";
-  const active = [f.q, f.type, f.category, f.distrito, f.priceMin, f.priceMax].filter((v) => v != null && v !== "").length + f.fields.length;
+  const quick = new Set<string>(activeQuick(f));
+  const active = [f.q, f.type, f.category, f.distrito, f.priceMin, f.priceMax].filter((v) => v != null && v !== "").length + f.fields.length + quick.size;
+  const extra = numberFields.length + choiceFields.length;
 
   return (
     <details className="panel group md:open:block" open>
@@ -64,19 +67,42 @@ export function FiltersForm({ filters: f, types, categories, distritos, numberFi
         <Group title="Preço (€)">
           <Range name="preco" min={f.priceMin} max={f.priceMax} />
         </Group>
-        {numberFields.map((nf) => (
-          <Group key={nf.key} title={nf.money ? `${nf.label} (€)` : nf.label}>
-            <Range name={nf.key} sep="_" min={fieldVal(nf.key, "min") as number | ""} max={fieldVal(nf.key, "max") as number | ""} />
+        {quickFilters.length > 0 && (
+          <Group title="Mostrar só">
+            <div className="flex flex-col gap-1.5 text-sm">
+              {quickFilters.map((q) => (
+                <label key={q.param} className="flex cursor-pointer items-center gap-2">
+                  <input type="checkbox" name={q.param} value="1" defaultChecked={quick.has(q.param)} onChange={submit} className="size-4 accent-accent" />
+                  {q.label}
+                </label>
+              ))}
+            </div>
           </Group>
-        ))}
-        {choiceFields.map((cf) => (
-          <Group key={cf.key} title={cf.label}>
-            <select name={cf.key} defaultValue={String(fieldVal(cf.key, "equals"))} onChange={submit} className="input" aria-label={cf.label}>
-              <option value="">Indiferente</option>
-              {cf.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </Group>
-        ))}
+        )}
+        {extra > 0 && (
+          // Os restantes filtros ficam recolhidos para a coluna não ficar comprida (abertos se algum estiver em uso).
+          <details className="group/mais py-3.5" open={f.fields.length > 0}>
+            <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold">
+              Mais filtros {f.fields.length > 0 && <span className="rounded-full bg-accent px-2 text-xs text-white">{f.fields.length}</span>}
+              <span aria-hidden="true" className="inline-block text-muted transition-transform group-open/mais:rotate-180">▾</span>
+            </summary>
+            <div className="mt-2 flex flex-col divide-y divide-line">
+              {numberFields.map((nf) => (
+                <Group key={nf.key} title={nf.money ? `${nf.label} (€)` : nf.label}>
+                  <Range name={nf.key} sep="_" min={fieldVal(nf.key, "min") as number | ""} max={fieldVal(nf.key, "max") as number | ""} />
+                </Group>
+              ))}
+              {choiceFields.map((cf) => (
+                <Group key={cf.key} title={cf.label}>
+                  <select name={cf.key} defaultValue={String(fieldVal(cf.key, "equals"))} onChange={submit} className="input" aria-label={cf.label}>
+                    <option value="">Indiferente</option>
+                    {cf.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </Group>
+              ))}
+            </div>
+          </details>
+        )}
         <div className="flex flex-col gap-2 pt-4">
           <button className="btn-primary">Aplicar filtros</button>
           {active > 0 && <a href="/all-ads/" className="btn-ghost">Limpar filtros</a>}
